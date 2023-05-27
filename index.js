@@ -1,16 +1,9 @@
-// This node.js script convert vue 2 vue-property-decorator Vue 3 <script setup lang="ts">
-// NB PLEASE REPLACE NO 2 IN "[ ]{2}" WITH YOUR TAB SIZE. (2 is default in VS Code)
+// This Node.js script transforms Vue 2 vue-property-decorator code to Vue 3 <script setup lang="ts">.
+// IMPORTANT: Replace the number '2' in "[ ]{2}" with your preferred tab size. (VS Code uses 2 by default).
 
-// CODE IS PROVIDED "AS IS" AND USE IT AT YOUR OWN RISK. MODIFY IT TO FIT YOUR NEEDS.
+// PLEASE NOTE: This script is provided "as is". Use it at your own risk and adjust it according to your specific requirements.
 
-// IT TAKE ALL FILES IN "importfolder" AND CONVERT THEM TO "exportfolder" WITH SAME FILENAME.
-
-// IT IS CREATED AND TESTED IN LIMITED ENVIROMENT FOR A SPECIFIC PROJECT. IT MAY NOT WORK FOR YOU. IT DOES NOT CONVERT EVERYTHING. YOU MAY NEED TO DO SOME MANUAL WORK AFTERWARDS.
-
-// IT CONVERTS VARIABLES, OBJECTS, ARRAYS, METHODS, COMPUTED / GET, @WATCH, @EMIT, @VMODEL, REFS, PROPS, INTERFACES, IMPORTS,
-// AND SOME OTHER STUFF.
-
-// IT IS NOT PERFECT BUT STILL MAY SAVE YOU A LOT OF TIME
+// The script takes all files from the "importfolder", converts them, and exports them to "exportfolder" maintaining the same filename.
 
 console.log("Starting convertion script");
 
