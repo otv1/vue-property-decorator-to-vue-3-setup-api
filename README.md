@@ -33,7 +33,7 @@ This script is capable of converting a range of Vue and **vue-property-decorator
 * $vuetify
 * And more...
 
-Please note, this script may not be perfect, and some manual adjustments might be necessary after the conversion. Its goal is to convert a spesific project and not to solve every cases.
+Please be aware that this script may not be flawless, and some manual adjustments may be required after the conversion. The primary aim of this project was to concentrate on converting a particular project up to 95%, rather than addressing every conceivable decorator scenario, making it an incomplete solution for some.
 
 ## Disclaimer
 The provided script is used at your own risk. It was created and tested in a specific environment for a particular project. You are free to modify it according to your project's needs.
