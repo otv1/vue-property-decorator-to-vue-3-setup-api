@@ -1,8 +1,8 @@
-# Vue 2 vue-property-decorator to Vue 3 setup-api converter :rocket:
-This Node.js-based tool is designed to automate the transformation of your Vue 2 scripts written with **vue-property-decorator** into **Vue 3's Composition API** format, 
+# Vue 2 vue-property-decorator to Vue 2/3 setup-api converter :rocket:
+This Node.js-based tool is designed to automate the transformation of your Vue 2 scripts written with **vue-property-decorator** into **Vue 3's Composition API** format, also available for vue 2.7.
 
 ## Converter
-This script helps developers transition from Vue 2 to Vue 3 by transforming their scripts written with the vue-property-decorator into the Composition API format, using **<script setup lang="ts">**
+This script helps developers transition from Vue 2 to Vue 2/3 by transforming their scripts written with the vue-property-decorator into the Composition API format, using **<script setup lang="ts">**
 
 ## Requirements
 1. Node.js installed on your machine. If not, you can download it from [Node.js Official Website](https://nodejs.org/).
