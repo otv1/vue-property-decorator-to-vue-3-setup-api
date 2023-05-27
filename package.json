@@ -1,0 +1,12 @@
+{
+  "name": "converter",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {},
+  "devDependencies": {},
+  "main": "index.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": ""
+}

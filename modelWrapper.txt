@@ -1,0 +1,25 @@
+// USAGE:
+//
+// FOR V-MODEL:
+// const mymodel = syncModel(props, emit)
+// 
+// FOR SYNCED PROPS, when using ".sync" parameter on the parent attribute.
+// const myprop = syncModel(props, emit, "myprop")
+
+
+import { computed, WritableComputedRef } from "vue";
+
+export function syncModel<T>(
+  props: Record<string, unknown>,
+  emit: (event: string, value: T) => void, // define the function signature explicitly
+  name = "modelValue"
+): WritableComputedRef<T> {
+  const emit_str = "update:" + name;
+  return computed({
+    get: () => props[name]?.valueOf() as T,
+    set: (value) => emit(emit_str, value),
+  });
+}
+
+
+

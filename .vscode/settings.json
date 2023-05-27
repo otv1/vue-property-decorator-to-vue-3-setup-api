@@ -1,0 +1,50 @@
+{
+  "files.autoSave": "onFocusChange", // afterDelay
+  "editor.formatOnSave": true,
+  "editor.formatOnPaste": false,
+  "editor.formatOnType": false,
+  "editor.tabCompletion": "on",
+  "git.autofetchPeriod": 10,
+  "git.autofetch": true,
+  "git.autorefresh": true,
+  "git.autoStash": false,
+  "eslint.run": "onType",
+  "eslint.alwaysShowStatus": true,
+  "vetur.format.defaultFormatter.html": "prettyhtml",
+  "vetur.format.defaultFormatter.css": "prettier",
+  "vetur.format.defaultFormatter.postcss": "prettier",
+  "vetur.format.defaultFormatter.scss": "prettier",
+  "vetur.format.defaultFormatter.less": "prettier",
+  "vetur.format.defaultFormatter.stylus": "stylus-supremacy",
+  "vetur.format.defaultFormatter.js": "prettier",
+  "vetur.format.defaultFormatter.ts": "prettier",
+  "vetur.format.options.tabSize": 4,
+  "vetur.format.options.useTabs": true,
+  // The number of spaces a tab is equal to. This setting is overridden
+  // based on the file contents when `editor.detectIndentation` is true.
+  "editor.tabSize": 4,
+  "vetur.experimental.templateInterpolationService": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": true
+  },
+  "search.exclude": {
+    "**/public/img/Regroup/wp": true,
+    "**/SQL": true
+  },
+  "emeraldwalk.runonsave": {
+    "commands": [
+      {
+        "match": "\\.js$",
+        "cmd": "node ${file}"
+      }
+    ]
+  }
+  // Insert spaces when pressing Tab. This setting is overriden
+  // based on the file contents when `editor.detectIndentation` is true.
+  // "editor.insertSpaces": false,
+  // When opening a file, `editor.tabSize` and `editor.insertSpaces`
+  // will be detected based on the file contents. Set to false to keep
+  // the values you've explicitly set, above.
+  // "editor.detectIndentation": false
+}
+// https://github.com/vuejs/vetur/blob/master/docs/formatting.md
