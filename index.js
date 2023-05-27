@@ -353,7 +353,7 @@ function ReplaceSaveDelay(i, files) {
     all_const_array.push({ line: model_str, name: name, order: 0 });
     // add to top of list of imports
     all_imports_array.push(
-      "import { syncModel } from '@/modules/modelWrapper';"
+      "import { syncModel } from '@/modules/modelWrapper'; // take a lookat modelwrapper.txt"
     );
     // add to top of props_list
     props_list.unshift({
