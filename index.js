@@ -168,21 +168,21 @@ regex_other.forEach((r) => {
 });
 
 try {
-  Do_The_Work();
+  startConversionScript();
 } catch (e) {
   dumpError(e);
 }
 
 console.log("Finished");
 
-function Do_The_Work() {
-  var files = all_files_in_folder(import_folder);
+function startConversionScript() {
+  var files = getAllFilesInFolder(import_folder);
   for (var i = 0; i < files.length; i++) {
-    ReplaceSaveDelay(i, files);
+    replaceSaveDelay(i, files);
   }
 }
 
-function all_files_in_folder(folder) {
+function getAllFilesInFolder(folder) {
   // using nodejs
   const fs = require("fs");
   const path = require("path");
@@ -199,24 +199,24 @@ function all_files_in_folder(folder) {
   return files_array;
 }
 
-function LoadTextFile(filepath) {
+function loadTextFile(filepath) {
   // using nodejs
   var fs = require("fs");
   const content = fs.readFileSync(filepath, { encoding: "utf8", flag: "r" });
   return content;
 }
 
-function SaveTextFile(filepath, data) {
+function saveTextFile(filepath, data) {
   var fs = require("fs");
   fs.writeFileSync(filepath, data);
 }
 
-function ReplaceSaveDelay(i, files) {
+function replaceSaveDelay(i, files) {
   console.log("Processing " + files[i].Name);
   var file = files[i];
   var file_name = file.Name;
   var file_path = file.Path;
-  var file_contents_all = LoadTextFile(file_path);
+  var file_contents_all = loadTextFile(file_path);
 
   var content_array = file_contents_all.split('<script lang="ts">');
 
@@ -255,7 +255,7 @@ function ReplaceSaveDelay(i, files) {
     var local_str = script_contents;
     while ((matches = r.regex.exec(local_str))) {
       const object_str = "{" + matches[3].toString() + "}";
-      var modifiedJsonString = ModifyJsonString(object_str);
+      var modifiedJsonString = modifyJsonString(object_str);
 
       const prop = {
         decorator: matches[1],
@@ -378,7 +378,7 @@ function ReplaceSaveDelay(i, files) {
     var type = matches[3];
 
     var object_str = matches[1];
-    var modifiedJsonString = object_str ? ModifyJsonString(object_str) : "";
+    var modifiedJsonString = object_str ? modifyJsonString(object_str) : "";
     var object = modifiedJsonString ? JSON.parse(modifiedJsonString) : {};
 
     var model_str =
@@ -442,7 +442,7 @@ function ReplaceSaveDelay(i, files) {
   //////////////////////////////////////////
 
   // Multiline fix: Add "}" to computed functions: "const myvar = computed((*) => {" functions
-  script_contents = ReplaceEndCharReturn(
+  script_contents = replaceEndCharReturn(
     script_contents,
     "computed(",
     /^[ ]{2}const \w+ = computed\((.*)\{$/m,
@@ -553,7 +553,7 @@ function ReplaceSaveDelay(i, files) {
         ) {
           const function_name = line.split(" = ")[0].split("const ")[1];
           lines[i] =
-            BuildWatchString(
+            buildWatchString(
               watch_props_list,
               watch_var_list,
               watch_other_list,
@@ -654,8 +654,8 @@ function ReplaceSaveDelay(i, files) {
   refs_list.sort((a, b) => a.name.localeCompare(b.name));
 
   // build <script setup tag followed by all imports + defineProps + script_contents
-  var define_props_string = CreateDefinePropsString(props_list);
-  var define_emits_string = CreateDefineEmitsString(emits_list);
+  var define_props_string = createDefinePropsString(props_list);
+  var define_emits_string = createDefineEmitsString(emits_list);
   var add_setup_pluss =
     '<script setup lang="ts">' +
     "\n" +
@@ -706,10 +706,10 @@ function ReplaceSaveDelay(i, files) {
   file_contents_all = content_array[0] + script_contents;
   // Save file
   var export_file = path.join(export_folder, file_name);
-  SaveTextFile(export_file, file_contents_all);
+  saveTextFile(export_file, file_contents_all);
 }
 
-function BuildWatchString(
+function buildWatchString(
   watch_props_list,
   watch_var_list,
   watch_other_list,
@@ -755,7 +755,7 @@ function BuildWatchString(
   return watch_string;
 }
 
-function CreateDefinePropsString(props_list) {
+function createDefinePropsString(props_list) {
   var props_string = "";
   var has_default = false;
   // Order props alphabetically
@@ -769,14 +769,14 @@ function CreateDefinePropsString(props_list) {
   if (props_string == "") return "";
   props_string = "defineProps<{\n" + props_string + "}>()\n";
   if (has_default) {
-    props_string = CreateWithDefaultsString(props_list, props_string);
+    props_string = createWithDefaultsString(props_list, props_string);
   }
   props_string = "const props = " + props_string;
 
   return props_string + "\n";
 }
 
-function CreateWithDefaultsString(props_list, props_string) {
+function createWithDefaultsString(props_list, props_string) {
   var default_string = "";
   props_list.forEach((p) => {
     if (p.object && p.object.default === "false") p.object.default = "";
@@ -795,7 +795,7 @@ function CreateWithDefaultsString(props_list, props_string) {
   return props_string;
 }
 
-function CreateDefineEmitsString(emits_list) {
+function createDefineEmitsString(emits_list) {
   var emits_string = "";
 
   if (emits_list.length === 0) return "";
@@ -809,7 +809,7 @@ function CreateDefineEmitsString(emits_list) {
 
 // Function running find and replace on a line matching a regex /^[ \t]{2}\}/gm, but must occur on a line after matching a line containing the string "computed((". Replace to "  });"
 
-function ReplaceEndCharReturn(
+function replaceEndCharReturn(
   script_contents,
   match_simple_first,
   then_match_regex,
@@ -870,7 +870,7 @@ function dumpError(err) {
     console.log("dumpError :: argument is not an object");
   }
 }
-function ModifyJsonString(object_str) {
+function modifyJsonString(object_str) {
   return object_str.replace(
     /(['"])?([a-zA-Z0-9_]+)(['"])?: (['"])?([a-zA-Z0-9_]+)(['"])?/g,
     '"$2": "$5"'
