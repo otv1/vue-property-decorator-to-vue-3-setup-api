@@ -14,13 +14,11 @@ const import_folder = path.join(__dirname, "importfolder");
 const export_folder = path.join(__dirname, "exportfolder");
 
 // regular expressions (regex)
-const regex_script_tag = /<script lang="ts">/;
+
 const regex_imports = /import (.*?) from (.*?);\n/gs;
 const regex_interfaces_multiline = /export interface (.*?) {\n(.*?)\n}/gs;
 const regex_find_this = /this.(\w*)/g;
-const regex_const_reactive_before_replace =
-  /^[ ]{2}(\w+)(: )?(\w+) = {([A-z0-9\[\]\{\} ."\-:,/\n]+)};$/gm;
-const regex_const_ref_before_replace = /^[ ]{2}(\w+)(: )?(.*)? = (.*)(;)$/gm;
+// This regex is used to find const variables with type, for objects and arays after the convertion, so we can put them in a list and sort them, and move them to the top of the script:
 const regex_const_ref_after_replace =
   /^[ ]{2}const (\w+) = (ref|reactive)(\<([A-z0-9\[\]\{\} :;|\n]*)\>)?\([\n ]*([[A-z0-9\[\]\{\} ."\-:,/\*\n]*)[\n ]*\);$/gm; // Se also: "Regex: Find const variable with type"
 const regex_const_computed = /^[ \t]{2}get (.*)\((.*)?\)(:)? ?(.*)? {$/gm;
@@ -67,8 +65,22 @@ const regex_other = [
     disabled: false,
   },
   {
-    // Const name = ref<>
-    regex: regex_const_ref_before_replace,
+    // name = "value" > const name = ref("value")
+    regex: /^[ ]{2}(\w+)(: )?(.*)? = "(.*)"(;)$/gm,
+    to: '  const $1 = ref<$3>("$4")$5',
+    disabled: false,
+  },
+  ,
+  {
+    // name = 123 > const name = ref(123)
+    regex: /^[ ]{2}(\w+)(: )?(.*)? = ([0-9]+)(;)$/gm,
+    to: "  const $1 = ref<$3>($4)$5",
+    disabled: false,
+  },
+  ,
+  {
+    // name = true > const name = ref(true) // boolean
+    regex: /^[ ]{2}(\w+)(: )?(.*)? = (true|false)+(;)$/gm,
     to: "  const $1 = ref<$3>($4)$5",
     disabled: false,
   },
@@ -104,30 +116,30 @@ const regex_other = [
   },
   {
     // Find const (to reactive) variable with type, for objects. Multiline
-    // Ps. see also: regex_const_ref_after_replace
+    // Ps. sync with: regex_const_ref_after_replace
     regex:
-      /^[ ]{2}(\w+)(: )?(\w+)? ([A-z0-9\[\]\{\} ."\-:;,|\n]?) ?= (\{[A-z0-9\[\]\{\} ."\-:,/\*\n]+\});$/gm,
+      /^[ ]{2}(\w+)(: )?(\w+)? ([A-z0-9\[\]\{\} ."\-:;,|\n]*) ?= (\{[A-z0-9\[\]\{\} ."\-:,/\*\n]+\});$/gm,
     to: "  const $1 = reactive<$3>($5);",
     disabled: false,
   },
   {
-    // Replace reactive<>
-    regex: /reactive\<\>\(/gm,
-    to: "reactive(",
-    disabled: false,
-  },
-  {
-    // Find const (to ref) variable with type, for arrays. Multiline
-    // Ps. see also: regex_const_ref_after_replace
+    // Find const (to reactive) variable with type, for arrays. Multiline
+    // Ps. sync with: regex_const_ref_after_replace
     regex:
-      /^[ ]{2}(\w+)(:)? ([A-z0-9\[\]\{\} ."\-:;,|\n]?) ?= (\[[A-z0-9\[\]\{\} ."\-:,/\*\n]+\]);$/gm,
-    to: "  const $1 = ref<$3>($4);",
+      /^[ ]{2}(\w+)(: )?(\w+)?[\[\]]* ([A-z0-9\[\]\{\} ."\-:;,|\n]*) ?= (\[[A-z0-9\[\]\{\} ."\-:,/\*\n]+\]);$/gm,
+    to: "  const $1 = reactive<$3>($5);",
     disabled: false,
   },
   {
     // Replace ref<>
     regex: /ref\<\>\(/gm,
     to: "ref(",
+    disabled: false,
+  },
+  {
+    // Replace reactive<>
+    regex: /reactive\<\>\(/gm,
+    to: "reactive(",
     disabled: false,
   },
   {
@@ -259,17 +271,19 @@ function processFileContent(file_contents_all) {
 
       const prop = {
         decorator: matches[1],
-        attr_name: matches[2],
         object: JSON.parse(modifiedJsonString),
-        name: matches[5],
+        name: matches[2] || matches[5],
         type: matches[6],
+        const_name: matches[5],
       };
+
       console.log(prop);
 
       // Adding syncmodel for @PropsSync
       if (prop.decorator == "@PropSync") {
         // Add to emits
-        emits_list.push("update:" + prop.attr_name);
+
+        emits_list.push("update:" + prop.name);
 
         // Add import syncmodel
         if (all_imports_array.indexOf(import_syncmodel_str) === -1) {
@@ -278,13 +292,13 @@ function processFileContent(file_contents_all) {
         // add SyncModel
         var model_str =
           "  const " +
-          prop.name +
+          prop.const_name +
           " = syncModel<" +
           prop.type +
           ">(props, emit, '" +
-          prop.attr_name +
+          prop.name +
           "');";
-        all_const_array.push({ line: model_str, name: prop.name, order: 1 });
+        all_const_array.push({ line: model_str, name: prop.name, order: 0 });
       }
 
       // Adding converted const of @Prop or @PropSync to props_list
