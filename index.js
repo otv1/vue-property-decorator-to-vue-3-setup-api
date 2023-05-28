@@ -13,7 +13,7 @@ const path = require("path");
 const import_folder = path.join(__dirname, "importfolder");
 const export_folder = path.join(__dirname, "exportfolder");
 
-// REGEX
+// regular expressions (regex)
 const regex_script_tag = /<script lang="ts">/;
 const regex_imports = /import (.*?) from (.*?);\n/gs;
 const regex_interfaces_multiline = /export interface (.*?) {\n(.*?)\n}/gs;
@@ -178,7 +178,7 @@ console.log("Finished");
 function startConversionScript() {
   var files = getAllFilesInFolder(import_folder);
   for (var i = 0; i < files.length; i++) {
-    replaceSaveDelay(i, files);
+    processFile(files[i]);
   }
 }
 
@@ -211,13 +211,13 @@ function saveTextFile(filepath, data) {
   fs.writeFileSync(filepath, data);
 }
 
-function replaceSaveDelay(i, files) {
-  console.log("Processing " + files[i].Name);
-  var file = files[i];
-  var file_name = file.Name;
-  var file_path = file.Path;
-  var file_contents_all = loadTextFile(file_path);
-
+function processFile(file) {
+  console.log("Processing " + file.Name);
+  var file_contents_all = loadTextFile(file.Path);
+  const processed_file_content = processFileContent(file_contents_all);
+  saveTextFile(path.join(export_folder, file.Name), processed_file_content);
+}
+function processFileContent(file_contents_all) {
   var content_array = file_contents_all.split('<script lang="ts">');
 
   if (content_array.length < 2) {
@@ -469,7 +469,7 @@ function replaceSaveDelay(i, files) {
   //  "}"
   //);
 
-  // Find all variables on root (const) and replace script_coents with the same variable name with .value
+  // Find all variables on root (const) and replace script_contents with the same variable name with .value
   var matches;
   var local_str = script_contents;
   while ((matches = regex_const_ref_after_replace.exec(local_str))) {
@@ -704,9 +704,7 @@ function replaceSaveDelay(i, files) {
 
   // Prepare complete file for export
   file_contents_all = content_array[0] + script_contents;
-  // Save file
-  var export_file = path.join(export_folder, file_name);
-  saveTextFile(export_file, file_contents_all);
+  return file_contents_all;
 }
 
 function buildWatchString(
