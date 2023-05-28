@@ -171,7 +171,6 @@ try {
   Do_The_Work();
 } catch (e) {
   dumpError(e);
-  System_Beep();
 }
 
 console.log("Finished");
@@ -856,9 +855,6 @@ function ReplaceEndCharReturn(
   }
 
   return lines.join("\n");
-}
-function System_Beep() {
-  process.stdout.write("\x07");
 }
 function dumpError(err) {
   if (typeof err === "object") {
