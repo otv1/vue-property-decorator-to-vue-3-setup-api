@@ -35,7 +35,11 @@ This script is capable of converting a range of Vue and **vue-property-decorator
 * And more...
 
 Please be aware that this script may not be flawless, and some manual adjustments may be required after the conversion. The primary aim of this project was to concentrate on converting a particular project up to 95%, rather than addressing every conceivable decorator scenario, making it an incomplete solution for some.
-
+  
+## Roadmap
+1. **Converting code to TypeScript and restructuring it:** This step will enhance code readability and maintainability by introducing strong typing and organizing the code structure. 
+2. **Adding options for grouping and ordering:** To enhance flexibility, you can introduce options to enable or disable grouping and ordering on individual sections of your code, such as const, computed, and method.
+  
 ## Disclaimer
 The provided script is used at your own risk. It was created and tested in a specific environment for a particular project. You are free to modify it according to your project's needs.
 
