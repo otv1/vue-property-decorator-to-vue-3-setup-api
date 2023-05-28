@@ -28,6 +28,7 @@ This script is capable of converting a range of Vue and **vue-property-decorator
 * @Emit
 * @Vmodel
 * @Prop
+* @PropSync
 * Interfaces
 * Imports
 * $vuetify

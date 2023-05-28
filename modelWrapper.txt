@@ -9,7 +9,23 @@
 
 import { computed, WritableComputedRef } from "vue";
 
+// use this for vue 2
+
 export function syncModel<T>(
+  props: Record<string, unknown>,
+  emit: (event: string, value: T) => void, // define the function signature explicitly
+  name = "value"
+): WritableComputedRef<T> {
+  const emit_str = name === "value" ? "input" : "update:" + name;
+  return computed({
+    get: () => props[name]?.valueOf() as T,
+    set: (value) => emit(emit_str, value),
+  });
+}
+
+// use this for vue 3
+
+export function syncModel_vue3<T>(
   props: Record<string, unknown>,
   emit: (event: string, value: T) => void, // define the function signature explicitly
   name = "modelValue"

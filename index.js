@@ -7,6 +7,8 @@
 
 console.log("Starting convertion script");
 
+const TO_VUE_VERSION = "2"; // 2 or 3 !! IMPORTANT !!
+
 const path = require("path");
 const import_folder = path.join(__dirname, "importfolder");
 const export_folder = path.join(__dirname, "exportfolder");
@@ -25,13 +27,13 @@ const regex_const_computed = /^[ \t]{2}get (.*)\((.*)?\)(:)? ?(.*)? {$/gm;
 const regex_var_equals_var = /[ ]{2}(\w+) = (\w+);/g;
 const regex_watch = /[ ]{2}@Watch\("(.*)"\)$/;
 const regex_emits = /\$emit\(["'](\w*)["'].*?\)/g;
-const regex_vmodel = /@VModel\(.*? ?.*?\) ?\n?\s* ?(.*)!: (.*)\;/g;
+const regex_vmodel = /@VModel\((.*? ?.*?)\) ?\n?\s* ?(.*)!: (.*)\;/g;
 const regex_refs = /\$refs.[\["]?(\w+)["\]]*[ as ]*(\w*)/gm;
 
 const regex_props = [
   {
     regex:
-      /@Prop\(.*? ?(default: (?<=)(.*?),)?.*?\) ?\n?\s*(readonly|public)? ?(.*)!: (.*);/g,
+      /(@Prop|@PropSync)\("?(.*?)"?,? ?{(.*)}\) ?\n?\s*(readonly|public)? ?(.*)!: (.*);/g,
     to: "", // Remove
   },
 ];
@@ -155,6 +157,9 @@ const regex_other = [
   },
 ];
 
+const import_syncmodel_str =
+  "import { syncModel } from '@/modules/modelWrapper'; // take a look at modelwrapper.txt";
+
 // at least one regex is disabled log it  import { ref } from "vue";
 regex_other.forEach((r) => {
   if (r.disabled) {
@@ -245,24 +250,51 @@ function ReplaceSaveDelay(i, files) {
   // removing interfaces
   script_contents = script_contents.replace(regex_interfaces_multiline, "");
 
-  // For each @Props
+  // For each @Prop / @PropsSync
   regex_props.forEach((r) => {
     // run regex, get all matches, and add to props_list
     var local_str = script_contents;
     while ((matches = r.regex.exec(local_str))) {
-      const prop = {
-        name: matches[4],
-        p_type: matches[5],
-        default: matches[2] ? matches[2] : "",
-      };
+      const object_str = "{" + matches[3].toString() + "}";
+      var modifiedJsonString = ModifyJsonString(object_str);
 
+      const prop = {
+        decorator: matches[1],
+        attr_name: matches[2],
+        object: JSON.parse(modifiedJsonString),
+        name: matches[5],
+        type: matches[6],
+      };
+      console.log(prop);
+
+      // Adding syncmodel for @PropsSync
+      if (prop.decorator == "@PropSync") {
+        // Add to emits
+        emits_list.push("update:" + prop.attr_name);
+
+        // Add import syncmodel
+        if (all_imports_array.indexOf(import_syncmodel_str) === -1) {
+          all_imports_array.push(import_syncmodel_str);
+        }
+        // add SyncModel
+        var model_str =
+          "  const " +
+          prop.name +
+          " = syncModel<" +
+          prop.type +
+          ">(props, emit, '" +
+          prop.attr_name +
+          "');";
+        all_const_array.push({ line: model_str, name: prop.name, order: 1 });
+      }
+
+      // Adding converted const of @Prop or @PropSync to props_list
       props_list.push(prop);
-      // tmp
     }
-    // Removing all @Props
+    // Removing all @Props / @PropsSync
     script_contents = script_contents.replace(r.regex, "");
   });
-  // End for each @Props
+  // End for each @Props / @PropsSync
 
   // get the list of emits
   while ((matches = regex_emits.exec(file_contents_all))) {
@@ -343,26 +375,35 @@ function ReplaceSaveDelay(i, files) {
   var local_str = script_contents;
 
   while ((matches = regex_vmodel.exec(local_str))) {
-    var name = matches[1];
-    var type = matches[2];
+    var name = matches[2];
+    var type = matches[3];
+
+    var object_str = matches[1];
+    var modifiedJsonString = object_str ? ModifyJsonString(object_str) : "";
+    var object = modifiedJsonString ? JSON.parse(modifiedJsonString) : {};
+
     var model_str =
       "  const " + name + " = syncModel<" + type + ">(props, emit)";
-    // remove the @VModel
-    script_contents = script_contents.replace(matches[0], "");
+
     // add to top of list of consts
     all_const_array.push({ line: model_str, name: name, order: 0 });
     // add to top of list of imports
-    all_imports_array.push(
-      "import { syncModel } from '@/modules/modelWrapper'; // take a lookat modelwrapper.txt"
-    );
+
+    if (all_imports_array.indexOf(import_syncmodel_str) === -1) {
+      all_imports_array.push(import_syncmodel_str);
+    }
+
     // add to top of props_list
     props_list.unshift({
-      name: "value", // vue 3 "modelValue"
-      p_type: type,
-      default: "",
+      name: TO_VUE_VERSION === "2" ? "value" : "modelValue",
+      type,
+      object,
     });
     // add to top of emits_list // vue 3 "update:modelValue"
-    emits_list.unshift("input");
+    emits_list.unshift(TO_VUE_VERSION === "2" ? "input" : "update:modelValue");
+
+    // remove the @VModel
+    script_contents = script_contents.replace(matches[0], "");
   }
 
   // Convert @vuetify
@@ -722,14 +763,16 @@ function CreateDefinePropsString(props_list) {
   props_list = props_list.sort((a, b) => (a.name > b.name ? 1 : -1));
   // Create props string
   props_list.forEach((p) => {
-    props_string += "  " + p.name + "?: " + p.p_type + ", \n";
-    has_default = has_default || p.default != "";
+    required_str = p.object && p.object.required === "true" ? "" : "?";
+    props_string += "  " + p.name + required_str + ": " + p.type + ", \n";
+    has_default = has_default || (p.object && p.object.default);
   });
   if (props_string == "") return "";
-  props_string = "const props = defineProps<{\n" + props_string + "}>();\n";
+  props_string = "defineProps<{\n" + props_string + "}>()\n";
   if (has_default) {
     props_string = CreateWithDefaultsString(props_list, props_string);
   }
+  props_string = "const props = " + props_string;
 
   return props_string + "\n";
 }
@@ -737,9 +780,15 @@ function CreateDefinePropsString(props_list) {
 function CreateWithDefaultsString(props_list, props_string) {
   var default_string = "";
   props_list.forEach((p) => {
-    default_string += "  " + p.name + ": " + (p.default != "" ? p.default : "");
-    // line break if not last
-    default_string += p !== props_list[props_list.length - 1] ? ",\n" : "";
+    if (p.object && p.object.default === "false") p.object.default = "";
+    else if (p.object && p.object.default === "true") p.object.default = true;
+    else if (p.object && p.object.default)
+      p.object.default = "'" + p.object.default + "'";
+    if (p.object && p.object.default) {
+      default_string += "  " + p.name + ": " + ("" + p.object.default + "");
+      // line break if not last
+      default_string += p !== props_list[props_list.length - 1] ? ",\n" : "";
+    }
   });
   props_string =
     "withDefaults(" + props_string + ", {\n" + default_string + "\n});" + "";
@@ -824,4 +873,10 @@ function dumpError(err) {
   } else {
     console.log("dumpError :: argument is not an object");
   }
+}
+function ModifyJsonString(object_str) {
+  return object_str.replace(
+    /(['"])?([a-zA-Z0-9_]+)(['"])?: (['"])?([a-zA-Z0-9_]+)(['"])?/g,
+    '"$2": "$5"'
+  );
 }
