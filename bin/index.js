@@ -29,11 +29,10 @@ const argv = yargs
       "Set the Vue target version. By default, it is set to 2. Use 3 to convert to Vue 3. The difference is related to v-model.",
     type: "number",
   })
-  .option("no-grouping", {
+  .option("grouping", {
     alias: "g",
-    describe: "Deactivate the grouping of declarations for refs/reactive.",
+    describe: "Activate the grouping of declarations for refs/reactive.",
     type: "boolean",
-    "boolean-negation": true,
   })
   .option("no-comment", {
     alias: "n",
@@ -111,7 +110,7 @@ const regex_interfaces_multiline = /export interface (.*?) {\n(.*?)\n}/gs;
 const regex_find_this = /this.(\w*)/g;
 // This regex is used to find const variables with type, for objects and arays after the convertion, so we can put them in a list and sort them, and move them to the top of the script:
 const regex_const_ref_after_replace =
-  /^[ ]{2}const (\w+) = (ref|reactive)(\<([A-z0-9\[\]\{\} :;|\n]*)\>)?\([\n ]*([[A-z0-9\[\]\{\} ."\-:,/\*\n]*)[\n ]*\);$/gm; // Se also: "Regex: Find const variable with type"
+  /^[ ]{2}const (\w+) = (ref|reactive)(\<([A-z0-9\[\]\{\} :;\|\n]*)\>)?\([\n ]*([[A-z0-9\[\]\{\} ."\-:,/\*\n]*)[\n ]*\);$/gm; // Se also: "Regex: Find const variable with type"
 const regex_const_computed = /^[ \t]{2}get (.*)\((.*)?\)(:)? ?(.*)? {$/gm;
 const regex_var_equals_var = /[ ]{2}(\w+) = (\w+);/g;
 const regex_watch = /[ ]{2}@Watch\("(.*)"\)$/;
@@ -144,14 +143,14 @@ const regex_other = [
   {
     // Remove existing refs and "as unknown as, on root, convert to class component variable. it will be converted to const / ref later.
     regex:
-      /^[ ]*(\w+) = ref\<([A-z0-9\[\] |]*)\>\([\n ]*(.*)[\n ]*\) as unknown as ([A-z0-9\[\] |]*);$/gm,
+      /^[ ]*(\w+) = ref\<([A-z0-9\[\] \|]*)\>\([\n ]*(.*)[\n ]*\) as unknown as ([A-z0-9\[\] \|]*);$/gm,
     to: "  $1: $2 = $3;",
     disabled: false,
   },
   {
     // Convert this.xxxx = ref<>(null) to xxxx.value = null;
     regex:
-      /^[ ]*this.(\w+) = ref\<([A-z0-9\[\] |]*)\>\([\n ]*(.*)[\n ]*\) as unknown as ([A-z0-9\[\] |]*);$/gm,
+      /^[ ]*this.(\w+) = ref\<([A-z0-9\[\] \|]*)\>\([\n ]*(.*)[\n ]*\) as unknown as ([A-z0-9\[\] \|]*);$/gm,
     to: "    $1.value = $3;",
     disabled: false,
   },
@@ -173,6 +172,18 @@ const regex_other = [
     // name = true > const name = ref(true) // boolean
     regex: /^[ ]{2}(\w+)(: )?(.*)? = (true|false)+(;)$/gm,
     to: "  const $1 = ref<$3>($4)$5",
+    disabled: false,
+  },
+  {
+    // name = true > const name = ref(true) // boolean
+    regex: /^[ ]{2}(\w+) = (\w+);$/gm,
+    to: "  const $1 = ref($2);",
+    disabled: false,
+  },
+  {
+    // variable = method(); => const variable = ref(method());
+    regex: /^[ ]{2}(\w+) = (\w+\(\));$/gm,
+    to: "  const $1 = ref($2);",
     disabled: false,
   },
   {
@@ -209,7 +220,7 @@ const regex_other = [
     // Find const (to reactive) variable with type, for objects. Multiline
     // Ps. sync with: regex_const_ref_after_replace
     regex:
-      /^[ ]{2}(\w+)(: )?(\w+)? ([A-z0-9\[\]\{\} ."\-:;,|\n]*) ?= (\{[A-z0-9\[\]\{\} ."\-:,/\*\n]+\});$/gm,
+      /^[ ]{2}(\w+)(: )?(\w+)? ([A-z0-9\[\]\{\} ."\-:;,\|\n]*) ?= (\{[A-z0-9\[\]\{\} ."\-:,/\*\n]+\});$/gm,
     to: "  const $1 = reactive<$3>($5);",
     disabled: false,
   },
@@ -217,8 +228,14 @@ const regex_other = [
     // Find const (to reactive) variable with type, for arrays. Multiline
     // Ps. sync with: regex_const_ref_after_replace
     regex:
-      /^[ ]{2}(\w+)(: )?(\w+)?[\[\]]* ([A-z0-9\[\]\{\} ."\-:;,|\n]*) ?= (\[[A-z0-9\[\]\{\} ."\-:,/\*\n]+\]);$/gm,
+      /^[ ]{2}(\w+)(: )?(\w+)?[\[\]]* ([A-z0-9\[\]\{\} ."\-:;,\|\n]*) ?= (\[[A-z0-9\[\]\{\} ."\-:,/\*\n]+\]);$/gm,
     to: "  const $1 = reactive<$3>($5);",
+    disabled: false,
+  },
+  {
+    // data: Object[] = null; => const data = ref<Object[]>(null);
+    regex: /^[ ]{2}(\w+): ([\w\| \[\]]+) = ([\w\[\]]+);$/gm,
+    to: "  const $1 = ref<$2>($3);",
     disabled: false,
   },
   {
@@ -593,7 +610,7 @@ function processFileContent(file_contents_all, file_name) {
     });
 
     // Remove the line
-    if (!argv["no-grouping"])
+    if (argv["grouping"])
       script_contents = script_contents.replace(matches[0], "");
   }
 
@@ -769,7 +786,7 @@ function processFileContent(file_contents_all, file_name) {
   // build <script setup tag followed by all imports + defineProps + script_contents
   var define_props_string = createDefinePropsString(props_list);
   var define_emits_string = createDefineEmitsString(emits_list);
-  if (argv["no-grouping"])
+  if (!argv["grouping"])
     all_const_array = all_const_array.filter((c) => c.order === 0);
   var add_setup_pluss =
     '<script setup lang="ts">' +
