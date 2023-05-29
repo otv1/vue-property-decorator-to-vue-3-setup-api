@@ -1,17 +1,108 @@
+#!/usr/bin/env node
+
 // This Node.js script transforms Vue 2 vue-property-decorator code to Vue 3 <script setup lang="ts">.
-// IMPORTANT: Replace the number '2' in "[ ]{2}" with your preferred tab size. (VS Code uses 2 by default).
 
-// PLEASE NOTE: This script is provided "as is". Use it at your own risk and adjust it according to your specific requirements.
+let TARGET_VUE_VERSION = 2; // 2 or 3 !! IMPORTANT !!
 
-// The script takes all files from the "importfolder", converts them, and exports them to "exportfolder" maintaining the same filename.
+const yargs = require("yargs");
+const node_path = require("path");
+const fs = require("fs");
 
-console.log("Starting convertion script");
+// Define the command-line options
 
-const TO_VUE_VERSION = "2"; // 2 or 3 !! IMPORTANT !!
+const argv = yargs
+  .option("path", {
+    alias: "p",
+    describe: "The path to the file or directory to convert",
+    demandOption: true, // Makes the option required
+    type: "string",
+  })
+  .option("destination", {
+    alias: "d",
+    describe:
+      "Specify the path to the destination directory. Defaults to the current path.",
+    type: "string",
+  })
+  .option("vue", {
+    alias: "v",
+    describe:
+      "Set the Vue target version. By default, it is set to 2. Use 3 to convert to Vue 3. The difference is related to v-model.",
+    type: "number",
+  })
+  .option("no-grouping", {
+    alias: "g",
+    describe: "Deactivate the grouping of declarations for refs/reactive.",
+    type: "boolean",
+    "boolean-negation": true,
+  })
+  .option("no-comment", {
+    alias: "n",
+    describe:
+      "Disable the inclusion of informative comments within the JavaScript code for importing the modelWrapper.",
+    type: "boolean",
+    "boolean-negation": true,
+  }).argv;
 
-const path = require("path");
-const import_folder = path.join(__dirname, "importfolder");
-const export_folder = path.join(__dirname, "exportfolder");
+if (argv.path && !isFileOrDirectory(getFullPath(argv.path))) {
+  console.log("Path must be a file or directory");
+  return;
+}
+if (argv.destination && !isDirectory(getFullPath(argv.destination))) {
+  console.log("Destination must be a directory");
+  return;
+}
+if (argv.vue && argv.vue !== 2 && argv.vue !== 3) {
+  console.log("Vue version must be 2 or 3");
+  return;
+}
+
+function isDirectory(arg) {
+  try {
+    const stats = fs.statSync(arg);
+
+    return stats.isDirectory();
+  } catch (error) {
+    return false;
+  }
+}
+function isFile(arg) {
+  try {
+    const stats = fs.statSync(arg);
+
+    return stats.isFile();
+  } catch (error) {
+    return false;
+  }
+}
+function isFileOrDirectory(arg) {
+  return isDirectory(arg) || isFile(arg);
+}
+function getFullPath(arg) {
+  var currentPath = process.cwd();
+  arg = node_path.join(currentPath, arg);
+
+  return arg;
+}
+function getFilename(arg) {
+  if (isDirectory(arg)) return "";
+  return node_path.basename(arg);
+}
+function getDirname(arg) {
+  if (isDirectory(arg)) return arg;
+  return node_path.dirname(arg);
+}
+
+// Set the path
+const p = getFullPath(argv.path);
+const file_name = getFilename(p);
+const import_path = getDirname(p);
+const destination_path = argv.destination
+  ? getFullPath(argv.destination)
+  : import_path;
+
+if (argv.vue) {
+  TARGET_VUE_VERSION = argv.vue;
+}
 
 // regular expressions (regex)
 
@@ -169,40 +260,45 @@ const regex_other = [
   },
 ];
 
-const import_syncmodel_str =
-  "import { syncModel } from '@/modules/modelWrapper'; // take a look at modelwrapper.txt";
+let import_syncmodel_str =
+  "import { syncModel } from '@/modules/modelWrapper';\n";
+
+const comment =
+  "// Copy modelWrapper from https://github.com/otv1/vue-property-decorator-to-vue-3-setup-api/blob/main/modelWrapper.txt\n";
+
+if (!argv["no-comment"]) import_syncmodel_str = import_syncmodel_str + comment;
 
 // at least one regex is disabled log it  import { ref } from "vue";
 regex_other.forEach((r) => {
   if (r.disabled) {
-    console.log("Regex disabled: " + r.regex);
+    //console.log("Regex disabled: " + r.regex);
   }
 });
 
-try {
-  startConversionScript();
-} catch (e) {
-  dumpError(e);
-}
-
-console.log("Finished");
+startConversionScript();
 
 function startConversionScript() {
-  var files = getAllFilesInFolder(import_folder);
-  for (var i = 0; i < files.length; i++) {
-    processFile(files[i]);
+  if (file_name.length > 0) {
+    processFile({ Name: file_name, Path: import_path + "/" + file_name });
+  } else {
+    console.log("Starting processing folder");
+    var files = getAllFilesInFolder(import_path);
+    for (var i = 0; i < files.length; i++) {
+      processFile(files[i]);
+    }
+    console.log("Finished processing folder");
   }
+  console.log("Please run linting on the generated code");
 }
 
 function getAllFilesInFolder(folder) {
   // using nodejs
-  const fs = require("fs");
-  const path = require("path");
+
   const files = fs.readdirSync(folder);
   var files_array = [];
   for (var i = 0; i < files.length; i++) {
     var file = files[i];
-    var file_path = path.join(folder, file);
+    var file_path = node_path.join(folder, file);
     var file_stats = fs.statSync(file_path);
     if (file_stats.isFile()) {
       files_array.push({ Name: file, Path: file_path });
@@ -224,17 +320,28 @@ function saveTextFile(filepath, data) {
 }
 
 function processFile(file) {
-  console.log("Processing " + file.Name);
-  var file_contents_all = loadTextFile(file.Path);
-  const processed_file_content = processFileContent(file_contents_all);
-  saveTextFile(path.join(export_folder, file.Name), processed_file_content);
+  try {
+    console.log(" " + file.Name + " - started processing");
+    var file_contents_all = loadTextFile(file.Path);
+    const processed_file_content = processFileContent(
+      file_contents_all,
+      file.Name
+    );
+    saveTextFile(
+      node_path.join(destination_path, file.Name),
+      processed_file_content
+    );
+  } catch (e) {
+    dumpError(e);
+  } finally {
+    console.log(" " + file.Name + " - finished processing");
+  }
 }
-function processFileContent(file_contents_all) {
+function processFileContent(file_contents_all, file_name) {
   var content_array = file_contents_all.split('<script lang="ts">');
 
   if (content_array.length < 2) {
-    console.log("No <script lang='ts'> found in " + file_name);
-    return;
+    throw "No <script lang='ts'> found in " + file_name;
   }
   var script_contents = content_array[1];
 
@@ -268,16 +375,22 @@ function processFileContent(file_contents_all) {
     while ((matches = r.regex.exec(local_str))) {
       const object_str = "{" + matches[3].toString() + "}";
       var modifiedJsonString = modifyJsonString(object_str);
+      let object = {};
+      try {
+        object = JSON.parse(modifiedJsonString);
+      } catch (e) {
+        console.error("***** ERROR PARSING: " + matches[0]);
+      }
 
       const prop = {
         decorator: matches[1],
-        object: JSON.parse(modifiedJsonString),
+        object: object,
         name: matches[2] || matches[5],
         type: matches[6],
         const_name: matches[5],
       };
 
-      console.log(prop);
+      //console.log(prop);
 
       // Adding syncmodel for @PropsSync
       if (prop.decorator == "@PropSync") {
@@ -340,9 +453,9 @@ function processFileContent(file_contents_all) {
     );
   }
 
-  console.log("props list: " + props_list.length);
-  console.log("emits list: " + emits_list.length);
-  console.log("refs list: " + refs_list.length);
+  //console.log("props list: " + props_list.length);
+  //console.log("emits list: " + emits_list.length);
+  //console.log("refs list: " + refs_list.length);
 
   // search for "variable = variable" used for linking to imports.
   var matches;
@@ -408,12 +521,14 @@ function processFileContent(file_contents_all) {
 
     // add to top of props_list
     props_list.unshift({
-      name: TO_VUE_VERSION === "2" ? "value" : "modelValue",
+      name: TARGET_VUE_VERSION === 2 ? "value" : "modelValue",
       type,
       object,
     });
     // add to top of emits_list // vue 3 "update:modelValue"
-    emits_list.unshift(TO_VUE_VERSION === "2" ? "input" : "update:modelValue");
+    emits_list.unshift(
+      TARGET_VUE_VERSION === 2 ? "input" : "update:modelValue"
+    );
 
     // remove the @VModel
     script_contents = script_contents.replace(matches[0], "");
@@ -463,33 +578,14 @@ function processFileContent(file_contents_all) {
     "}"
   );
 
-  // Multiline fix: Add "]" to ref arrays :
-  // "const myvar: = ref<Array[]>([" functions
-  // or "const myvar: = ref(["
-  //script_contents = ReplaceEndCharReturn(
-  //  script_contents,
-  //  "([",
-  //  /^[ ]{2}const \w+ = ref(<(.*)>)?\(\[$/m,
-  //  "]"
-  //);
-
-  // Multiline fix: Add "}" to ref objects :
-  // "search for: const myvar: = ref<ObjectType>({"
-  // or : "const myvar: = ref<{"
-  //script_contents = ReplaceEndCharReturn(
-  //  script_contents,
-  //  "({",
-  //  /^[ ]{2}const \w+ = ref(<(.*)>)?\(\{$/m,
-  //  "}"
-  //);
-
   // Find all variables on root (const) and replace script_contents with the same variable name with .value
   var matches;
   var local_str = script_contents;
   while ((matches = regex_const_ref_after_replace.exec(local_str))) {
     var const_name = matches[1];
-    //Build array so we can sort it and movie it to the top
-    var order = matches[2] === "ref" ? 1 : 2; // 1 = ref, 2 = reactive
+    // 1 = ref, 2 = reactive
+    all_const_array.pus;
+    var order = matches[2] === "ref" ? 1 : 2;
     all_const_array.push({
       line: matches[0],
       name: const_name,
@@ -497,7 +593,8 @@ function processFileContent(file_contents_all) {
     });
 
     // Remove the line
-    script_contents = script_contents.replace(matches[0], "");
+    if (!argv["no-grouping"])
+      script_contents = script_contents.replace(matches[0], "");
   }
 
   // sort all_const_array by length of name, so that we replace the longest first
@@ -551,7 +648,7 @@ function processFileContent(file_contents_all) {
       }
       if (!match)
         console.error(
-          '### Fatal error 1 in @Watch. IndexOf not matching regex. : \n"' +
+          '### Critical error (1) in processing @Watch. IndexOf not matching regex. : \n"' +
             line +
             '" match: ' +
             match
@@ -576,7 +673,9 @@ function processFileContent(file_contents_all) {
             "\n" +
             line;
         } else {
-          console.error("### Fatal error 2 in @Watch : " + line);
+          console.error(
+            "### Critical error (2) in processing @Watch : " + line
+          );
         }
       }
     }
@@ -670,38 +769,40 @@ function processFileContent(file_contents_all) {
   // build <script setup tag followed by all imports + defineProps + script_contents
   var define_props_string = createDefinePropsString(props_list);
   var define_emits_string = createDefineEmitsString(emits_list);
+  if (argv["no-grouping"])
+    all_const_array = all_const_array.filter((c) => c.order === 0);
   var add_setup_pluss =
     '<script setup lang="ts">' +
     "\n" +
-    '// #region "imports"' +
+    //'// #region "imports"' +
     "\n" +
     all_imports_array.join("") +
     "\n" +
-    "// #endregion" +
+    //"// #endregion" +
     "\n";
   if (all_interfaces_array.length > 0)
     add_setup_pluss =
       add_setup_pluss +
-      '// #region "interfaces"' +
+      //'// #region "interfaces"' +
       "\n" +
       all_interfaces_array.join("\n") +
       "\n" +
-      "// #endregion" +
+      //"// #endregion" +
       "\n";
   if (define_props_string || define_emits_string)
     add_setup_pluss =
       add_setup_pluss +
-      '// #region "defineProps / defineEmits"' +
+      //'// #region "defineProps / defineEmits"' +
       "\n" +
       define_props_string +
       define_emits_string +
       "\n" +
-      "// #endregion" +
+      //"// #endregion" +
       "\n";
   if (all_const_array.length > 0)
     add_setup_pluss =
       add_setup_pluss +
-      '// #region "const"' +
+      //'// #region "const"' +
       "\n" +
       all_const_array.map((c) => c.line).join("\n") +
       "\n";
@@ -711,9 +812,10 @@ function processFileContent(file_contents_all) {
       "// $refs:\n" +
       refs_list.map((c) => c.line).join("\n") +
       "\n" +
-      "// #endregion" +
+      //"// #endregion" +
       "\n";
 
+  script_contents = removeEmptyTrimmedLines(script_contents);
   script_contents = add_setup_pluss + script_contents;
 
   // Prepare complete file for export
@@ -845,7 +947,7 @@ function replaceEndCharReturn(
       var matches = then_match_regex.exec(line);
       if (matches) {
         // we found a match
-        console.log("found match, line: " + line);
+        //console.log("found match, line: " + line);
         found_end_char = false;
         // check if next line contains end char
         for (var y = i; y < lines.length; y++) {
@@ -878,13 +980,31 @@ function dumpError(err) {
       console.log("====================");
       console.log(err.stack);
     }
+  }
+  if (typeof err === "string") {
+    {
+      console.log(err);
+    }
   } else {
-    console.log("dumpError :: argument is not an object");
+    console.log("dumpError :: argument is not an object or a string");
   }
 }
 function modifyJsonString(object_str) {
   return object_str.replace(
-    /(['"])?([a-zA-Z0-9_]+)(['"])?: (['"])?([a-zA-Z0-9_]+)(['"])?/g,
-    '"$2": "$5"'
+    /([a-zA-Z0-9_]+)\s*:\s*(".*?"|[a-zA-Z0-9_]+)/g,
+    (_, p1, p2) => `"${p1}": ${p2.startsWith('"') ? p2 : `"${p2}"`}`
   );
+}
+
+function removeEmptyTrimmedLines(str) {
+  var lines = str.split("\n");
+  var last_line = lines[lines.length - 1];
+  var new_lines = [];
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i];
+    if (line.trim() !== "") {
+      new_lines.push(line);
+    }
+  }
+  return new_lines.join("\n");
 }

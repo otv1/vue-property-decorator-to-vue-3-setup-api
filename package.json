@@ -1,12 +1,38 @@
 {
-  "name": "converter",
-  "version": "0.1.0",
-  "private": true,
-  "scripts": {},
-  "devDependencies": {},
-  "main": "index.js",
-  "keywords": [],
-  "author": "",
+  "name": "vue-declassify-to-setup",
+  "version": "1.0.0",
+  "author": "Øystein Tvedten <oystein.tvedten@outlook.com>",
   "license": "ISC",
-  "description": ""
+  "description": "Converts VUE 2 vue-property-decorator classes to Composition API / setup-API",
+  "main": "./bin/index.js",
+  "files": [
+    "./**/*"
+  ],
+  "bin": {
+    "vue-convert": "./bin/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/otv1/vue-property-decorator-to-vue-3-setup-api.git"
+  },
+  "keywords": [
+    "vue",
+    "vue2",
+    "vue3",
+    "class",
+    "object",
+    "refactor",
+    "declassify",
+    "vue-property-decorator"
+  ],
+  "homepage": "https://github.com/otv1/vue-property-decorator-to-vue-3-setup-api#readme",
+  "bugs": {
+    "url": "https://github.com/otv1/vue-property-decorator-to-vue-3-setup-api/issues"
+  },
+  "scripts": {
+    "dev": "node ./index.js"
+  },
+  "dependencies": {
+    "yargs": "^17.7.2"
+  }
 }

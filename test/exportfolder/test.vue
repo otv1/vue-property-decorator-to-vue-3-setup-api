@@ -3,41 +3,39 @@
 </template>
 
 <script setup lang="ts">
-// #region "imports"
-import { ref, computed } from "vue";
-import { syncModel } from "@/modules/modelWrapper"; // take a look at modelwrapper.txt
-// #endregion
-// #region "defineProps / defineEmits"
+import { ref, computed, reactive } from "vue";
+import { syncModel } from "@/modules/modelWrapper";
+// Copy modelWrapper from https://github.com/otv1/vue-property-decorator-to-vue-3-setup-api/blob/main/modelWrapper.txt
+
 const props = withDefaults(
   defineProps<{
     myProp?: string;
     myProp2: string;
     myProp3?: string;
-    myProp4: string;
     myProp5?: string;
     myProp6?: boolean;
-    syncedName?: string;
+    mypropvalue: string;
+    propname?: string;
     value: boolean;
   }>(),
   {
     myProp3: "test",
-    myProp4: "test",
     myProp5: "test",
     myProp6: true,
-    syncedName: "test",
+    mypropvalue: "my test default",
+    propname: "default text",
   }
 );
-const emit = defineEmits(["update:name", "input"]);
-// #endregion
-// #region "const"
-const name = syncModel<boolean>(props, emit);
-const syncedName = syncModel<string>(props, emit, "name");
-const world = ref("World");
+const emit = defineEmits(["update:propname", "input"]);
 
+const name = syncModel<boolean>(props, emit);
+const syncedName = syncModel<string>(props, emit, "propname");
+const world = ref("World");
+const mydata = reactive(["data1", "data2", "data3"]);
+const myobject = reactive({ name: "Name", age: 12 });
 const today = computed((): string => {
   return "today";
 });
-
 const UpdateWorld = (data: string): void => {
   world.value = data;
 };
