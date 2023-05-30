@@ -56,11 +56,11 @@ vue-convert --help
   -p, --path         The path to the file or directory to convert
                                                             
   -d, --destination  Specify the path to the destination directory. Defaults to
-                     the current path.                              
-  -v, --vue          Set the Vue target version. By default, it is set to
-                     2. Use 3 to convert to Vue 3. The difference is related to
-                     v-model.                                          
-  -g, --no-grouping  Deactivate the grouping of declarations for refs/reactive.
+                     the current path.                       
+  -v, --vue          Set the Vue target version. By default, it is set to 2. Use
+                     3 to convert to Vue 3. The difference is related to
+                     v-model.
+  -g, --grouping     Activate the grouping of declarations for refs/reactive.
                                                                        
   -n, --no-comment   Disable the inclusion of informative comments within the
                      JavaScript code for importing the modelWrapper.
