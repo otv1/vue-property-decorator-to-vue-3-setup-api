@@ -71,9 +71,11 @@ vue-convert --path . --destination "./exportfolder" --vue 3 --g -no-comment
 ```
 
 ## Disclaimer
-Please note that this script is designed to work with a tab size of 2. If your editor uses a different tab size, adjust it accordingly before running the code.
+Please note that this script is designed to work with a **tab size of 2**. If your editor uses a different tab size, adjust it accordingly before running the converter.
 
-The provided script is used at your own risk. It was specifically designed and tested for a certain project in a particular environment, hence may require manual adjustments when used in different contexts. In this version, "@Components" are not converted as they are often unnecessary. Auto-linting is expected.
+This version **only supports double-quoted** strings. Make sure the code is set up with double-quoted strings before running the converter.
+
+"The provided script is to be used at your own risk. It was specifically designed and tested for a specific project in a particular environment, and may require manual adjustments when applied in different contexts. In this version, the **"@Components" decorator is not converted** as it's often unnecessary. Auto-linting is anticipated."
 
 While this project focuses on achieving up to 95% conversion for a specific project, it might not address all decorator scenarios, making it potentially incomplete for certain requirements. Your understanding is appreciated.
 
