@@ -5,7 +5,7 @@ This Node.js-based tool is designed to automate the transformation of your Vue 2
 This script helps developers transition from Vue 2 to Vue 3 by transforming their scripts written with the vue-property-decorator into the Composition API format, using **<script setup lang="ts">**
 
 ## Roadmap
-This project is currently in active development and has encountered some issues. However, a stable release is expected later this week, which will include a command-line interface (CLI) tool. Stay tuned for updates.
+1. Support upgrading of $set, $delete, $slot, ... (later this week)
 
 ## Requirements
 1. Node.js installed on your machine. If not, you can download it from [Node.js Official Website](https://nodejs.org/).
