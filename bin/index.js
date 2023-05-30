@@ -250,9 +250,15 @@ const regex_other = [
     disabled: false,
   },
   {
-    // div...
+    // myobj: obj = {
     regex: /^[ ]{2}(\w+)(: )([A-z0-9\[\]\{\} ."+\-:;,\|\n]*) ?= ((.|\n)*?);$/gm,
     to: "  const $1 = ref<$3>($4);",
+    disabled: false,
+  },
+  {
+    // variable = object.sub.sub2; => const variable = ref(object.sub.sub2);
+    regex: /^[ ]{2}(\w+)+ = ([\w\.\[\]]+);$/gm,
+    to: "",
     disabled: false,
   },
   {
@@ -488,10 +494,6 @@ function processFileContent(file_contents_all, file_name) {
       "ref_" + matches[1] + ".value"
     );
   }
-
-  //console.log("props list: " + props_list.length);
-  //console.log("emits list: " + emits_list.length);
-  //console.log("refs list: " + refs_list.length);
 
   // search for "variable = variable" used for linking to imports.
   var matches;
@@ -748,13 +750,14 @@ function processFileContent(file_contents_all, file_name) {
   // Add import { ref, watch, computed, reactive } from "vue";
   var vue_list = [];
 
-  vue_list.push("ref");
+  if (all_const_array.filter((c) => c.line.includes("ref")).length > 0)
+    vue_list.push("ref");
   if (has_computed) vue_list.push("computed");
   if (props_list.filter((p) => p.default).length > 0)
     vue_list.push("withDefaults");
   if (script_contents.indexOf("watch") > 0) vue_list.push("watch");
   if (script_contents.indexOf("mounted") > 0) vue_list.push("onMounted");
-  if (all_const_array.filter((c) => c.order === 2).length > 0)
+  if (all_const_array.filter((c) => c.line.includes("reactive")).length > 0)
     vue_list.push("reactive");
 
   // sort imports alphabetically
@@ -772,9 +775,11 @@ function processFileContent(file_contents_all, file_name) {
   // Manipulate imports
   if (vue_list.length > 0) {
     // remove vue++ from imports array
-    all_imports_array = all_imports_array.filter((i) => i.indexOf('"vue"') < 0);
     all_imports_array = all_imports_array.filter(
-      (i) => i.indexOf('"vue-property-decorator"') < 0
+      (i) => i.indexOf('from "vue"') < 0
+    );
+    all_imports_array = all_imports_array.filter(
+      (i) => i.indexOf('from "vue-property-decorator"') < 0
     );
     // Adding importing vue
     const imp_str = "import { " + vue_list.join(", ") + ' } from "vue";\n';
