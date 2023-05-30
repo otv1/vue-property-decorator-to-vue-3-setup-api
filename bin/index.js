@@ -109,8 +109,8 @@ const regex_imports = /import (.*?) from (.*?);\n/gs;
 const regex_interfaces_multiline = /export interface (.*?) {\n(.*?)\n}/gs;
 const regex_find_this = /this.(\w*)/g;
 // This regex is used to find const variables with type, for objects and arays after the convertion, so we can put them in a list and sort them, and move them to the top of the script:
-const regex_const_ref_after_replace =
-  /^[ ]{2}const (\w+) = (ref|reactive)(\<([A-z0-9\[\]\{\} :;\|\n]*)\>)?\([\n ]*([[A-z0-9\[\]\{\} ."\-:,/\*\n]*)[\n ]*\);$/gm; // Se also: "Regex: Find const variable with type"
+const regex_find_ref_reactive_for_grouping =
+  /^[ ]{2}const (\w+) = (ref|reactive)(\<([A-z0-9\[\]\{\} :;\|\n]*)\>)?\([\n ]*([[A-z0-9\[\]\{\} ."+\-:,/\*\n]*)[\n ]*\);$/gm; // Se also: "Regex: Find const variable with type"
 const regex_const_computed = /^[ \t]{2}get (.*)\((.*)?\)(:)? ?(.*)? {$/gm;
 const regex_var_equals_var = /[ ]{2}(\w+) = (\w+);/g;
 const regex_watch = /[ ]{2}@Watch\("(.*)"\)$/;
@@ -120,8 +120,14 @@ const regex_refs = /\$refs.[\["]?(\w+)["\]]*[ as ]*(\w*)/gm;
 
 const regex_props = [
   {
+    // @Prop({ type: Boolean, default: true }) readonly myProp6!: boolean;
     regex:
       /(@Prop|@PropSync)\("?(.*?)"?,? ?{(.*)}\) ?\n?\s*(readonly|public)? ?(.*)!: (.*);/g,
+    to: "", // Remove
+  },
+  {
+    // ex @Prop(Number) public myprop!: number;
+    regex: /(@Prop|@PropSync)\(()(\w*)\) (readonly|public)? ?(.*)!: (.*);/g,
     to: "", // Remove
   },
 ];
@@ -220,7 +226,7 @@ const regex_other = [
     // Find const (to reactive) variable with type, for objects. Multiline
     // Ps. sync with: regex_const_ref_after_replace
     regex:
-      /^[ ]{2}(\w+)(: )?(\w+)? ([A-z0-9\[\]\{\} ."\-:;,\|\n]*) ?= (\{[A-z0-9\[\]\{\} ."\-:,/\*\n]+\});$/gm,
+      /^[ ]{2}(\w+)(: )?(\w+)? ([A-z0-9\[\]\{\} ."+\-:;,\|\n]*) ?= (\{[A-z0-9\[\]\{\} ."\-:,/\*\n]+\});$/gm,
     to: "  const $1 = reactive<$3>($5);",
     disabled: false,
   },
@@ -228,7 +234,7 @@ const regex_other = [
     // Find const (to reactive) variable with type, for arrays. Multiline
     // Ps. sync with: regex_const_ref_after_replace
     regex:
-      /^[ ]{2}(\w+)(: )?(\w+)?[\[\]]* ([A-z0-9\[\]\{\} ."\-:;,\|\n]*) ?= (\[[A-z0-9\[\]\{\} ."\-:,/\*\n]+\]);$/gm,
+      /^[ ]{2}(\w+)(: )?(\w+)?[\[\]]* ([A-z0-9\[\]\{\} ."+\-:;,\|\n]*) ?= (\[([\s\S]*?)\n[ ]{2}\]);$/gm,
     to: "  const $1 = reactive<$3>($5);",
     disabled: false,
   },
@@ -257,10 +263,10 @@ const regex_other = [
     disabled: true,
   },
   {
-    // Replace ") as unknown as xx[];
-    regex: /[ ]+\) as unknown as (.*);/gm,
-    to: ");",
-    disabled: false,
+    //  as unknown as array[];
+    regex: /([ \]\}]*\)) as unknown as (.*);/gm,
+    to: "$1;",
+    disabled: true,
   },
   {
     // Replace emits in script
@@ -273,7 +279,7 @@ const regex_other = [
     // to if ("elevation" in props) {
     regex: /" in this/gm,
     to: '" in props',
-    disabled: false,
+    disabled: true,
   },
 ];
 
@@ -391,23 +397,17 @@ function processFileContent(file_contents_all, file_name) {
     var local_str = script_contents;
     while ((matches = r.regex.exec(local_str))) {
       const object_str = "{" + matches[3].toString() + "}";
-      var modifiedJsonString = modifyJsonString(object_str);
-      let object = {};
-      try {
-        object = JSON.parse(modifiedJsonString);
-      } catch (e) {
-        console.error("***** ERROR PARSING: " + matches[0]);
-      }
+
+      array_prop = ConvertObjectStringToArray(object_str);
 
       const prop = {
         decorator: matches[1],
-        object: object,
+        required: array_prop.includes({ name: "required", value: "true" }),
+        default: array_prop.find((p) => p.name === "default")?.value ?? "",
         name: matches[2] || matches[5],
         type: matches[6],
         const_name: matches[5],
       };
-
-      //console.log(prop);
 
       // Adding syncmodel for @PropsSync
       if (prop.decorator == "@PropSync") {
@@ -522,8 +522,8 @@ function processFileContent(file_contents_all, file_name) {
     var type = matches[3];
 
     var object_str = matches[1];
-    var modifiedJsonString = object_str ? modifyJsonString(object_str) : "";
-    var object = modifiedJsonString ? JSON.parse(modifiedJsonString) : {};
+
+    array_prop = ConvertObjectStringToArray(object_str);
 
     var model_str =
       "  const " + name + " = syncModel<" + type + ">(props, emit)";
@@ -540,7 +540,8 @@ function processFileContent(file_contents_all, file_name) {
     props_list.unshift({
       name: TARGET_VUE_VERSION === 2 ? "value" : "modelValue",
       type,
-      object,
+      required: array_prop.includes({ name: "required", value: "true" }),
+      default: array_prop.find((p) => p.name === "default")?.value ?? "",
     });
     // add to top of emits_list // vue 3 "update:modelValue"
     emits_list.unshift(
@@ -598,7 +599,7 @@ function processFileContent(file_contents_all, file_name) {
   // Find all variables on root (const) and replace script_contents with the same variable name with .value
   var matches;
   var local_str = script_contents;
-  while ((matches = regex_const_ref_after_replace.exec(local_str))) {
+  while ((matches = regex_find_ref_reactive_for_grouping.exec(local_str))) {
     var const_name = matches[1];
     // 1 = ref, 2 = reactive
     all_const_array.pus;
@@ -861,9 +862,9 @@ function buildWatchString(
       watch_string += "[";
     }
 
-    console.log("watch_props_list: " + watch_props_list.length);
-    console.log("watch_var_list: " + watch_var_list.length);
-    console.log("watch_other_list: " + watch_other_list.length);
+    //console.log("watch_props_list: " + watch_props_list.length);
+    //console.log("watch_var_list: " + watch_var_list.length);
+    //console.log("watch_other_list: " + watch_other_list.length);
 
     var joined_list = [
       ...watch_var_list,
@@ -893,9 +894,9 @@ function createDefinePropsString(props_list) {
   props_list = props_list.sort((a, b) => (a.name > b.name ? 1 : -1));
   // Create props string
   props_list.forEach((p) => {
-    required_str = p.object && p.object.required === "true" ? "" : "?";
+    required_str = p.required ? "" : "?";
     props_string += "  " + p.name + required_str + ": " + p.type + ", \n";
-    has_default = has_default || (p.object && p.object.default);
+    has_default = has_default || p.default;
   });
   if (props_string == "") return "";
   props_string = "defineProps<{\n" + props_string + "}>()\n";
@@ -910,12 +911,11 @@ function createDefinePropsString(props_list) {
 function createWithDefaultsString(props_list, props_string) {
   var default_string = "";
   props_list.forEach((p) => {
-    if (p.object && p.object.default === "false") p.object.default = "";
-    else if (p.object && p.object.default === "true") p.object.default = true;
-    else if (p.object && p.object.default)
-      p.object.default = "'" + p.object.default + "'";
-    if (p.object && p.object.default) {
-      default_string += "  " + p.name + ": " + ("" + p.object.default + "");
+    if (p.default === "false") p.default = "";
+    else if (p.default === "true") p.default = true;
+    else if (p.default) p.default = "'" + p.default + "'";
+    if (p.default) {
+      default_string += "  " + p.name + ": " + ("" + p.default + "");
       // line break if not last
       default_string += p !== props_list[props_list.length - 1] ? ",\n" : "";
     }
@@ -1006,11 +1006,40 @@ function dumpError(err) {
     console.log("dumpError :: argument is not an object or a string");
   }
 }
-function modifyJsonString(object_str) {
-  return object_str.replace(
-    /([a-zA-Z0-9_]+)\s*:\s*(".*?"|[a-zA-Z0-9_]+)/g,
-    (_, p1, p2) => `"${p1}": ${p2.startsWith('"') ? p2 : `"${p2}"`}`
-  );
+
+function ConvertObjectStringToArray(object_str) {
+  if (
+    [
+      "Number",
+      "String",
+      "Boolean",
+      "Object",
+      "Array",
+      "Function",
+      "Symbol",
+    ].includes(object_str)
+  ) {
+    object_str = "{ type: " + object_str + " }";
+  }
+
+  // Remove unnecessary characters and split the string into individual name-value pairs
+  const pairs = object_str
+    .replace(/[{}]/g, "") // Remove curly braces
+    .split(","); // Split at commas
+
+  // Initialize an empty array to store the result
+  const result = [];
+
+  // Iterate over each pair
+  pairs.forEach((pair) => {
+    // Split the pair into name and value
+    const [name, value] = pair.split(":").map((str) => str.trim());
+
+    // Add the name-value pair to the result array
+    result.push({ name, value });
+  });
+
+  return result;
 }
 
 function removeEmptyTrimmedLines(str) {
