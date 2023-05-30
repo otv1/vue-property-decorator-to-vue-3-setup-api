@@ -40,6 +40,11 @@ const argv = yargs
       "Disable the inclusion of informative comments within the JavaScript code for importing the modelWrapper.",
     type: "boolean",
     "boolean-negation": true,
+  })
+  .option("replaceglobals", {
+    describe: "For internal usage, in a particular project.",
+    type: "boolean",
+    hidden: true,
   }).argv;
 
 if (argv.path && !isFileOrDirectory(getFullPath(argv.path))) {
@@ -110,7 +115,7 @@ const regex_interfaces_multiline = /export interface (.*?) {\n(.*?)\n}/gs;
 const regex_find_this = /this.(\w*)/g;
 // This regex is used to find const variables with type, for objects and arays after the convertion, so we can put them in a list and sort them, and move them to the top of the script:
 const regex_find_ref_reactive_for_grouping =
-  /^[ ]{2}const (\w+) = (ref|reactive)(\<([A-z0-9\[\]\{\} :;\|\n]*)\>)?\([\n ]*([[A-z0-9\[\]\{\} ."+\-:,/\*\n]*)[\n ]*\);$/gm; // Se also: "Regex: Find const variable with type"
+  /^[ ]{2}const (\w+) = (ref|reactive)(\<([A-z0-9\[\]\{\} :;\|\n]*)\>)?\([\n ]*?(\[|\{)?(.|\n)*?(\]|\})?[\n ]*\);$/gm; // Se also: "Regex: Find const variable with type"
 const regex_const_computed = /^[ \t]{2}get (.*)\((.*)?\)(:)? ?(.*)? {$/gm;
 const regex_var_equals_var = /[ ]{2}(\w+) = (\w+);/g;
 const regex_watch = /[ ]{2}@Watch\("(.*)"\)$/;
@@ -226,7 +231,7 @@ const regex_other = [
     // Find const (to reactive) variable with type, for objects. Multiline
     // Ps. sync with: regex_const_ref_after_replace
     regex:
-      /^[ ]{2}(\w+)(: )?(\w+)? ([A-z0-9\[\]\{\} ."+\-:;,\|\n]*) ?= (\{[A-z0-9\[\]\{\} ."\-:,/\*\n]+\});$/gm,
+      /^[ ]{2}(\w+)(: )?(\w+)? ([A-z0-9\[\]\{\} ."+\-:;,\|\n]*) ?= (\{(.|\n)*?\});$/gm,
     to: "  const $1 = reactive<$3>($5);",
     disabled: false,
   },
@@ -234,7 +239,7 @@ const regex_other = [
     // Find const (to reactive) variable with type, for arrays. Multiline
     // Ps. sync with: regex_const_ref_after_replace
     regex:
-      /^[ ]{2}(\w+)(: )?(\w+)?[\[\]]* ([A-z0-9\[\]\{\} ."+\-:;,\|\n]*) ?= (\[([\s\S]*?)\n[ ]{2}\]);$/gm,
+      /^[ ]{2}(\w+)(: )?(\w+?\[\])* ([A-z0-9\[\]\{\} ."+\-:;,\|\n]*) ?= (\[(.|\n)*?\]);$/gm,
     to: "  const $1 = reactive<$3>($5);",
     disabled: false,
   },
@@ -242,6 +247,12 @@ const regex_other = [
     // data: Object[] = null; => const data = ref<Object[]>(null);
     regex: /^[ ]{2}(\w+): ([\w\| \[\]]+) = ([\w\[\]]+);$/gm,
     to: "  const $1 = ref<$2>($3);",
+    disabled: false,
+  },
+  {
+    // div...
+    regex: /^[ ]{2}(\w+)(: )([A-z0-9\[\]\{\} ."+\-:;,\|\n]*) ?= ((.|\n)*?);$/gm,
+    to: "  const $1 = ref<$3>($4);",
     disabled: false,
   },
   {
@@ -281,6 +292,21 @@ const regex_other = [
     to: '" in props',
     disabled: true,
   },
+  {
+    regex: /\$vuetify/gm,
+    to: "getCurrentInstance()?.proxy.$vuetify",
+    disabled: false,
+  },
+  {
+    regex: /\$router/gm,
+    to: "getCurrentInstance()?.proxy.$router",
+    disabled: false,
+  },
+  {
+    regex: /\$forceUpdate/gm,
+    to: "getCurrentInstance()?.proxy.$forceUpdate",
+    disabled: false,
+  },
 ];
 
 let import_syncmodel_str =
@@ -290,13 +316,6 @@ const comment =
   "// Copy modelWrapper from https://github.com/otv1/vue-property-decorator-to-vue-3-setup-api/blob/main/modelWrapper.txt\n";
 
 if (!argv["no-comment"]) import_syncmodel_str = import_syncmodel_str + comment;
-
-// at least one regex is disabled log it  import { ref } from "vue";
-regex_other.forEach((r) => {
-  if (r.disabled) {
-    //console.log("Regex disabled: " + r.regex);
-  }
-});
 
 startConversionScript();
 
@@ -552,23 +571,10 @@ function processFileContent(file_contents_all, file_name) {
     script_contents = script_contents.replace(matches[0], "");
   }
 
-  // Convert @vuetify
-  if (script_contents.includes("$vuetify")) {
-    script_contents = script_contents.replace(
-      /\$vuetify/gm,
-      "getCurrentInstance()?.proxy.$vuetify"
-    );
-    //all_imports_array.push("import { vuetify } from 'vuetify';\n");
-  }
-  // Convert $router
-  if (script_contents.includes("$router")) {
-    script_contents = script_contents.replace(/\$router/gm, "VueRouter");
-    all_imports_array.push('import VueRouter from "@/modules/router";\n');
-  }
-
-  // Convert this.globals
-  if (script_contents.includes("this.globals")) {
-    script_contents = script_contents.replace(/\$this.globals/gm, "globals");
+  // Convert this.globals, special for a project
+  if (argv["replaceglobals"] && script_contents.includes("globals")) {
+    script_contents = script_contents.replace(/this.globals/gm, "globals");
+    script_contents = script_contents.replace(/globals/gm, "globals");
     all_imports_array.push('import { getGlobals } from "@/main";\n');
     all_const_array.push({
       name: "globals",
@@ -578,7 +584,7 @@ function processFileContent(file_contents_all, file_name) {
   }
 
   //////////////////////////////////////////
-  // RUN REGEX FOR THE LIST OF OTHER REGEXES
+  // RUN REGEX OTHER
   //////////////////////////////////////////
   regex_other.forEach((r) => {
     if (r.disabled) return;
