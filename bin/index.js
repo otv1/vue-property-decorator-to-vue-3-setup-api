@@ -139,7 +139,7 @@ const regex_other = [
   { regex: /@Component\([\s\S]+?\)/m, to: "", disabled: false },
   {
     regex:
-      /(export default class .\w+ extends Vue )\{(\n[\s\S]+)\}\n+\<\/script>/,
+      /(export default class \w+ extends Vue )\{(\n[\s\S]+)\}\n+\<\/script>/,
     to: "$2</script>",
     disabled: false,
   },
@@ -330,12 +330,14 @@ const upgrade_utils_array = [
   {
     regex: /\$router/gm,
     to: "router",
-    import: "useRouter",
+    const: "const router = getCurrentInstance()?.proxy.$router;",
+    vueimport: "getCurrentInstance",
   },
   {
     regex: /\$route/gm,
     to: "route",
-    import: "useRoute",
+    const: "const route = getCurrentInstance()?.proxy.$route;",
+    vueimport: "getCurrentInstance",
   },
 ];
 
@@ -631,12 +633,13 @@ function processFileContent(file_contents_all, file_name) {
     script_contents = script_contents.replace(u.regex, u.to);
 
     // Add import if not exist allready
-    if (vue_list.includes(u.import)) {
-      vue_list.push(u.import);
+    if (u.vueimport !== "" && !vue_list.includes(u.vueimport)) {
+      vue_list.push(u.vueimport);
     }
     if (all_const_array.indexOf(u.name) === -1) {
       all_const_array.push({
-        line: `const ${u.to} = ${u.import}();`,
+        // line: `const ${u.to} = ${u.import}();`,
+        line: u.const,
         name: u.to,
         order: 0,
       });
