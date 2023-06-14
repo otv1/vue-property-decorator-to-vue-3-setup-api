@@ -643,8 +643,6 @@ function processFileContent(file_contents_all, file_name) {
     }
   });
 
-  script_contents = script_contents.replace("");
-
   // Find all variables on root (const) and replace script_contents with the same variable name with .value
   var matches;
   var local_str = script_contents;
