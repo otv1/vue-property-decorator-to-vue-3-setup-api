@@ -625,7 +625,7 @@ function processFileContent(file_contents_all, file_name) {
   // Replace upgrade_utils_array
   const vue_list = [];
   upgrade_utils_array.forEach((u) => {
-    const matches = u.regex.exec(script_contents).match;
+    const matches = u.regex.exec(script_contents);
     if (matches === null) return;
 
     script_contents = script_contents.replace(u.regex, u.to);
