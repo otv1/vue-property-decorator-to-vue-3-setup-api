@@ -489,9 +489,15 @@ function processFileContent(file_contents_all, file_name) {
       });
     }
 
+    // replace in script_contents, replacing $refs.xxx with ref_xxx.value
     script_contents = script_contents.replace(
       matches[0],
       "ref_" + matches[1] + ".value"
+    );
+    // replace template adding prefix "ref_"
+    content_array[0] = content_array[0].replace(
+      'ref="' + matches[1] + '"',
+      'ref="ref_' + matches[1] + '"'
     );
   }
 
