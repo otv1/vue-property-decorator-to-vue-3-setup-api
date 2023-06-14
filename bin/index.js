@@ -317,7 +317,7 @@ const regex_other = [
   {
     regex: /\$router/gm,
     to: "getCurrentInstance()?.proxy.$router",
-    disabled: false,
+    disabled: true,
   },
   {
     regex: /\$forceUpdate/gm,
@@ -325,6 +325,20 @@ const regex_other = [
     disabled: false,
   },
 ];
+
+const upgrade_utils_array = [
+  {
+    regex: /\$router/gm,
+    to: "router",
+    import: "useRouter",
+  },
+  {
+    regex: /\$route/gm,
+    to: "route",
+    import: "useRoute",
+  },
+];
+
 let import_syncmodel_str =
   "import { syncModel } from '@/modules/modelWrapper';\n";
 
@@ -608,6 +622,29 @@ function processFileContent(file_contents_all, file_name) {
     "}"
   );
 
+  // Replace upgrade_utils_array
+  const vue_list = [];
+  upgrade_utils_array.forEach((u) => {
+    const matches = u.regex.exec(script_contents).match;
+    if (matches === null) return;
+
+    script_contents = script_contents.replace(u.regex, u.to);
+
+    // Add import if not exist allready
+    if (vue_list.includes(u.import)) {
+      vue_list.push(u.import);
+    }
+    if (all_const_array.indexOf(u.name) === -1) {
+      all_const_array.push({
+        line: `const ${u.to} = ${u.import}();`,
+        name: u.to,
+        order: 0,
+      });
+    }
+  });
+
+  script_contents = script_contents.replace("");
+
   // Find all variables on root (const) and replace script_contents with the same variable name with .value
   var matches;
   var local_str = script_contents;
@@ -752,7 +789,6 @@ function processFileContent(file_contents_all, file_name) {
   }
 
   // Add import { ref, watch, computed, reactive } from "vue";
-  var vue_list = [];
 
   if (all_const_array.filter((c) => c.line.includes("ref")).length > 0)
     vue_list.push("ref");
