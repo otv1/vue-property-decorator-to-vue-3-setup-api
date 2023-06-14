@@ -40,11 +40,6 @@ const argv = yargs
       "Disable the inclusion of informative comments within the JavaScript code for importing the modelWrapper.",
     type: "boolean",
     "boolean-negation": true,
-  })
-  .option("replaceglobals", {
-    describe: "For internal usage, in a particular project.",
-    type: "boolean",
-    hidden: true,
   }).argv;
 
 if (argv.path && !isFileOrDirectory(getFullPath(argv.path))) {
@@ -330,7 +325,6 @@ const regex_other = [
     disabled: false,
   },
 ];
-
 let import_syncmodel_str =
   "import { syncModel } from '@/modules/modelWrapper';\n";
 
@@ -593,18 +587,6 @@ function processFileContent(file_contents_all, file_name) {
 
     // remove the @VModel
     script_contents = script_contents.replace(matches[0], "");
-  }
-
-  // Convert this.globals, special for a project
-  if (argv["replaceglobals"] && script_contents.includes("globals")) {
-    script_contents = script_contents.replace(/this.globals/gm, "globals");
-    script_contents = script_contents.replace(/globals/gm, "globals");
-    all_imports_array.push('import { getGlobals } from "@/main";\n');
-    all_const_array.push({
-      name: "globals",
-      line: "  const globals = getGlobals();",
-      order: 0,
-    });
   }
 
   //////////////////////////////////////////
