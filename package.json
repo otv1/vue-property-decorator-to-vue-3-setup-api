@@ -1,6 +1,6 @@
 {
   "name": "vue-declassify-to-setup",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "author": "Øystein Tvedten <oystein.tvedten@outlook.com>",
   "license": "ISC",
   "description": "A CLI tool that converts Vue 2 vue-property-decorator classes to Composition API / setup-API.",
