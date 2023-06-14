@@ -312,7 +312,7 @@ const regex_other = [
   {
     regex: /\$vuetify/gm,
     to: "getCurrentInstance()?.proxy.$vuetify",
-    disabled: false,
+    disabled: true,
   },
   {
     regex: /\$router/gm,
@@ -322,7 +322,7 @@ const regex_other = [
   {
     regex: /\$forceUpdate/gm,
     to: "getCurrentInstance()?.proxy.$forceUpdate",
-    disabled: false,
+    disabled: true,
   },
 ];
 
@@ -337,6 +337,18 @@ const upgrade_utils_array = [
     regex: /\$route/gm,
     to: "route",
     const: "const route = getCurrentInstance()?.proxy.$route;",
+    vueimport: "getCurrentInstance",
+  },
+  {
+    regex: /\$vuetify/gm,
+    to: "vuetify",
+    const: "const vuetify = getCurrentInstance()?.proxy.$vuetify;",
+    vueimport: "getCurrentInstance",
+  },
+  {
+    regex: /\$forceUpdate/gm,
+    to: "forceUpdate",
+    const: "const forceUpdate = getCurrentInstance()?.proxy.$forceUpdate;",
     vueimport: "getCurrentInstance",
   },
 ];
