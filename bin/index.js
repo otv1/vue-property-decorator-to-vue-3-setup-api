@@ -116,7 +116,8 @@ const regex_find_this = /this.(\w*)/g;
 // This regex is used to find const variables with type, for objects and arays after the convertion, so we can put them in a list and sort them, and move them to the top of the script:
 const regex_find_ref_reactive_for_grouping =
   /^[ ]{2}const (\w+) = (ref|reactive)(\<([A-z0-9\[\]\{\} :;\|\n]*)\>)?\([\n ]*?(\[|\{)?(.|\n)*?(\]|\})?[\n ]*\);$/gm; // Se also: "Regex: Find const variable with type"
-const regex_const_computed = /^[ \t]{2}get (.*)\((.*)?\)(:)? ?(.*)? {$/gm;
+const regex_const_computed =
+  /^[ \t]{2}(?:readonly|public|private)? ?get (.*)\((.*)?\)(:)? ?(.*)? \{$/gm;
 const regex_var_equals_var = /[ ]{2}(\w+) = (\w+);/g;
 const regex_watch = /[ ]{2}@Watch\("(.*)"\)$/;
 const regex_emits = /\$emit\(["'](\w*)["'].*?\)/g;
@@ -127,12 +128,13 @@ const regex_props = [
   {
     // @Prop({ type: Boolean, default: true }) readonly myProp6!: boolean;
     regex:
-      /(@Prop|@PropSync)\("?(.*?)"?,? ?{(.*)}\) ?\n?\s*(readonly|public)? ?(.*)!: (.*);/g,
+      /(@Prop|@PropSync)\("?(.*?)"?,? ?{(.*)}\) ?\n?\s*(readonly|public|private)? ?(.*)!: (.*);/g,
     to: "", // Remove
   },
   {
     // ex @Prop(Number) public myprop!: number;
-    regex: /(@Prop|@PropSync)\(()(\w*)\) (readonly|public)? ?(.*)!: (.*);/g,
+    regex:
+      /(@Prop|@PropSync)\(()(\w*)\) (readonly|public|private)? ?(.*)!: (.*);/g,
     to: "", // Remove
   },
 ];
@@ -167,33 +169,42 @@ const regex_other = [
   },
   {
     // name = "value" > const name = ref("value")
-    regex: /^[ ]{2}(\w+)(: )?(.*)? = "(.*)"(;)$/gm,
+    regex:
+      /^[ ]{2}(?:readonly|public|private)? ?(\w+)(: )?(.*)? = "(.*)"(;)$/gm,
     to: '  const $1 = ref<$3>("$4")$5',
     disabled: false,
   },
   ,
   {
     // name = 123 > const name = ref(123)
-    regex: /^[ ]{2}(\w+)(: )?(.*)? = ([0-9]+)(;)$/gm,
+    regex:
+      /^[ ]{2}(?:readonly|public|private)? ?(\w+)(: )?(.*)? = ([0-9]+)(;)$/gm,
     to: "  const $1 = ref<$3>($4)$5",
     disabled: false,
   },
   ,
   {
     // name = true > const name = ref(true) // boolean
-    regex: /^[ ]{2}(\w+)(: )?(.*)? = (true|false)+(;)$/gm,
+    regex:
+      /^[ ]{2}(?:readonly|public|private)? ?(\w+)(: )?(.*)? = (true|false)+(;)$/gm,
     to: "  const $1 = ref<$3>($4)$5",
     disabled: false,
   },
   {
     // name = true > const name = ref(true) // boolean
-    regex: /^[ ]{2}(\w+) = (\w+);$/gm,
+    regex: /^[ ]{2}(?:readonly|public|private)? ?(\w+) = (\w+);$/gm,
     to: "  const $1 = ref($2);",
     disabled: false,
   },
   {
     // variable = method(); => const variable = ref(method());
-    regex: /^[ ]{2}(\w+) = (\w+\(\));$/gm,
+    regex: /^[ ]{2}(?:readonly|public|private)? ?(\w+) = (!?\w+\(\));$/gm,
+    to: "  const $1 = ref($2);",
+    disabled: false,
+  },
+  {
+    // const myvar = whatever; => const myvar = ref(whatever);
+    regex: /[ ]{2}(?:readonly|public|private)? ?(\w+) = (.*?);/gm,
     to: "  const $1 = ref($2);",
     disabled: false,
   },
@@ -205,13 +216,15 @@ const regex_other = [
   },
   {
     // Methods
-    regex: /^[ ]{2}(async )?(\w+)\((.*)?\)(:)? ?(.*)? {$/gm,
+    regex:
+      /^[ ]{2}(?:readonly|public|private)? ?(async )?(\w+)\((.*)?\)(:)? ?(.*)? {$/gm,
     to: "  const $2 = $1($3)$4 $5 => {",
     disabled: false,
   },
   {
     // Methods multiline
-    regex: /^[ ]{2}(async )?(\w+)\((\n?(.*\/*\w: .*\n)* *)\)(:)? ?(.*)? \{$/gm,
+    regex:
+      /^[ ]{2}(?:readonly|public|private)? ?(async )?(\w+)\((\n?(.*\/*\w: .*\n)* *)\)(:)? ?(.*)? \{$/gm,
     to: "  const $2 = $1($3)$5 $6 => {",
     disabled: false,
   },
@@ -223,7 +236,7 @@ const regex_other = [
   },
   {
     // Find const variable without type, for array and objects.
-    regex: /^[ ]{2}(\w+) = ([\{\[])$/gm,
+    regex: /^[ ]{2}(?:readonly|public|private)? ?(\w+) = ([\{\[])$/gm,
     to: "  const $1 = ref($2",
     disabled: true,
   },
@@ -231,7 +244,7 @@ const regex_other = [
     // Find const (to reactive) variable with type, for objects. Multiline
     // Ps. sync with: regex_const_ref_after_replace
     regex:
-      /^[ ]{2}(\w+)(: )?(\w+)? ([A-z0-9\[\]\{\} ."+\-:;,\|\n]*) ?= (\{(.|\n)*?\});$/gm,
+      /^[ ]{2}(?:readonly|public|private)? ?(\w+)(: )?(\w+)? ([A-z0-9\[\]\{\} ."+\-:;,\|\n]*) ?= (\{(.|\n)*?\});$/gm,
     to: "  const $1 = reactive<$3>($5);",
     disabled: false,
   },
@@ -239,25 +252,27 @@ const regex_other = [
     // Find const (to ref) variable with type, for arrays. Multiline
     // Ps. sync with: regex_const_ref_after_replace
     regex:
-      /^[ ]{2}(\w+)(: )?(\w+?\[\])* ([A-z0-9\[\]\{\} ."+\-:;,\|\n]*) ?= (\[(.|\n)*?\]);$/gm,
+      /^[ ]{2}(?:readonly|public|private)? ?(\w+)(: )?(\w+?\[\])* ([A-z0-9\[\]\{\} ."+\-:;,\|\n]*) ?= (\[(.|\n)*?\]);$/gm,
     to: "  const $1 = ref<$3>($5);",
     disabled: false,
   },
   {
     // data: Object[] = null; => const data = ref<Object[]>(null);
-    regex: /^[ ]{2}(\w+): ([\w\| \[\]]+) = ([\w\[\]]+);$/gm,
+    regex:
+      /^[ ]{2}(?:readonly|public|private)? ?(\w+): ([\w\| \[\]]+) = ([\w\[\]]+);$/gm,
     to: "  const $1 = ref<$2>($3);",
     disabled: false,
   },
   {
     // myobj: obj = {
-    regex: /^[ ]{2}(\w+)(: )([A-z0-9\[\]\{\} ."+\-:;,\|\n]*) ?= ((.|\n)*?);$/gm,
+    regex:
+      /^[ ]{2}(?:readonly|public|private)? ?(\w+)(: )([A-z0-9\[\]\{\} ."+\-:;,\|\n]*) ?= ((.|\n)*?);$/gm,
     to: "  const $1 = ref<$3>($4);",
     disabled: false,
   },
   {
     // variable = object.sub.sub2; => const variable = ref(object.sub.sub2);
-    regex: /^[ ]{2}(\w+)+ = ([\w\.\[\]]+);$/gm,
+    regex: /^[ ]{2}(?:readonly|public|private)? ?(\w+)+ = ([\w\.\[\]]+);$/gm,
     to: "",
     disabled: false,
   },
