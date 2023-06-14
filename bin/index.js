@@ -121,7 +121,8 @@ const regex_const_computed =
 const regex_var_equals_var = /[ ]{2}(\w+) = (\w+);/g;
 const regex_watch = /[ ]{2}@Watch\("(.*)"\)$/;
 const regex_emits = /\$emit\(["'](\w*)["'].*?\)/g;
-const regex_vmodel = /@VModel\(\{(.*? ?.*?)\}\) ?\n?\s* ?(.*)!: (.*)\;/g;
+const regex_vmodel =
+  /[ ]{2}@VModel\(\{(.*? ?.*?)\}\) ?\n?\s* ?(?:readonly|public|private)? ?(.*)!:([\s\S]*?);/gm;
 const regex_refs = /\$refs.[\["]?(\w+)["\]]*[ as ]*(\w*)/gm;
 
 const regex_props = [
