@@ -236,11 +236,11 @@ const regex_other = [
     disabled: false,
   },
   {
-    // Find const (to reactive) variable with type, for arrays. Multiline
+    // Find const (to ref) variable with type, for arrays. Multiline
     // Ps. sync with: regex_const_ref_after_replace
     regex:
       /^[ ]{2}(\w+)(: )?(\w+?\[\])* ([A-z0-9\[\]\{\} ."+\-:;,\|\n]*) ?= (\[(.|\n)*?\]);$/gm,
-    to: "  const $1 = reactive<$3>($5);",
+    to: "  const $1 = ref<$3>($5);",
     disabled: false,
   },
   {
