@@ -825,15 +825,16 @@ function processFileContent(file_contents_all, file_name) {
   // replace all lines with "this." from script_contents
   script_contents = script_contents.replace(regex_find_this, "$1");
 
+  // remove vue++ from imports array
+  all_imports_array = all_imports_array.filter(
+    (i) => i.indexOf('from "vue"') < 0
+  );
+  all_imports_array = all_imports_array.filter(
+    (i) => i.indexOf("vue-property-decorator") < 0
+  );
+
   // Manipulate imports
   if (vue_list.length > 0) {
-    // remove vue++ from imports array
-    all_imports_array = all_imports_array.filter(
-      (i) => i.indexOf('from "vue"') < 0
-    );
-    all_imports_array = all_imports_array.filter(
-      (i) => i.indexOf('from "vue-property-decorator"') < 0
-    );
     // Adding importing vue
     const imp_str = "import { " + vue_list.join(", ") + ' } from "vue";\n';
 
