@@ -4,9 +4,6 @@ This Node.js-based tool is designed to automate the transformation of your Vue 2
 ## Converter
 This script helps developers transition from Vue 2 to Vue 3 by transforming their scripts written with the vue-property-decorator into the Composition API format, using **<script setup lang="ts">**
 
-## Roadmap
-1. Support upgrading of $set, $delete, $slot, ... (later this week)
-
 ## Requirements
 1. Node.js installed on your machine. If not, you can download it from [Node.js Official Website](https://nodejs.org/).
 2. Terminal window.
@@ -43,7 +40,7 @@ This script is capable of converting a range of Vue and **vue-property-decorator
 * @PropSync
 * Interfaces
 * Imports
-* $vuetify
+* $vuetify, $slot, $set, $delete, $forceUpdate, $router, $route, $nextTick
 * And more...
 
 
@@ -79,6 +76,10 @@ This version **only supports double-quoted** strings. Make sure the code is set 
 
 While this project focuses on achieving up to 95% conversion for a specific project, it might not address all decorator scenarios, making it potentially incomplete for certain requirements. Your understanding is appreciated.
 
+## Known issues
+1. If you write comments just before the </script> tag, the system won't understand. It needs to see an end-bracket (}) right before the </script> tag, not a comment.
+
+2. The -g --grouping feature doesn't work well with arrays or objects that are written directly in the code and end with a semicolon on the same line. The system expects to see the semicolon at the end of the entire array or object, not at the end of a line.
 
 ## Contributing
 Your feedback and contributions are welcome! If you encounter any issues, have suggestions or improvements, feel free to share. I appreciate your support in making this tool more efficient and versatile.
