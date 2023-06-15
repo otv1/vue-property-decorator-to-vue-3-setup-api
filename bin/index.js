@@ -29,11 +29,11 @@ const argv = yargs
       "Set the Vue target version. By default, it is set to 2. Use 3 to convert to Vue 3. The difference is related to v-model.",
     type: "number",
   })
-  .option("grouping", {
-    alias: "g",
-    describe: "Activate the grouping of declarations for refs/reactive.",
-    type: "boolean",
-  })
+  //.option("grouping", {
+  //  alias: "g",
+  //  describe: "Activate the grouping of declarations for refs/reactive.",
+  //  type: "boolean",
+  //})
   .option("no-comment", {
     alias: "n",
     describe:
@@ -127,20 +127,20 @@ const regex_var_equals_var = /[ ]{2}(\w+) = (\w+);/g;
 const regex_watch = /[ ]{2}@Watch\("(.*)"(, \{(?:.*)\})?\)$/;
 const regex_emits = /\$emit\(["'](\w*)["'].*?\)/g;
 const regex_vmodel =
-  /[ ]{2}@VModel\(\{(.*? ?.*?)\}\) ?\n?\s* ?(?:readonly|public|private)? ?(.*)!:([\s\S]*?);/gm;
+  /^[ ]{2}@VModel\(\{(.*? ?.*?)\}\) ?\n?\s* ?(?:readonly|public|private)? ?(.*)!:([\s\S]*?);$/gm;
 const regex_refs = /\$refs.[\["]?(\w+)["\]]*[ as ]*(\w*)/gm;
 
 const regex_props = [
   {
     // @Prop({ type: Boolean, default: true }) readonly myProp6!: boolean;
     regex:
-      /(@Prop|@PropSync)\("?(.*?)"?,? ?{(.*)}\) ?\n?\s*(readonly|public|private)? ?(.*)!:([\s\S]*?);/g,
+      /^[ ]{2}(@Prop|@PropSync)\("?(.*?)"?,? ?{(.*)}\) ?\n?\s*(readonly|public|private)? ?(.*)!:([\s\S]*?);$/gm,
     to: "", // Remove
   },
   {
     // ex @Prop(Number) public myprop!: number;
     regex:
-      /(@Prop|@PropSync)\(()([\w, \[\]]*)\) (readonly|public|private)? ?(.*)!:([\s\S]*?);/g,
+      /^[ ]{2}(@Prop|@PropSync)\(()([\w, \[\]]*)\) (readonly|public|private)? ?(.*)!:([\s\S]*?);$/gm,
     to: "", // Remove
   },
 ];
@@ -217,7 +217,7 @@ const regex_other = [
   },
   {
     // const myvar = whatever; => const myvar = ref(whatever);
-    regex: /[ ]{2}(?:readonly|public|private)? ?(\w+) = (.*?);/gm,
+    regex: /^[ ]{2}(?:readonly|public|private)? ?(\w+) = (.*?)$;/gm,
     to: "  const $1 = ref($2);",
     disabled: false,
   },
@@ -525,7 +525,12 @@ function processFileContent(file_contents_all, file_name) {
           ">(props, emit, '" +
           prop.name +
           "');";
-        all_const_array.push({ line: model_str, name: prop.name, order: 0 });
+
+        all_const_array.push({
+          line: model_str,
+          name: prop.const_name,
+          order: 0,
+        });
       }
 
       // Adding converted const of @Prop or @PropSync to props_list
@@ -582,12 +587,13 @@ function processFileContent(file_contents_all, file_name) {
     }
   }
 
-  // Do the same for regex_const_computed, and replace with .value
+  // Replace regex_const_computed, with .value
   var matches;
   var local_str = script_contents;
   var has_computed = false;
   while ((matches = regex_const_computed.exec(local_str))) {
     var name = matches[1];
+    console.log(name);
     var this_regex = new RegExp("this." + name + "(?!A-z0-9)", "g");
     script_contents = script_contents.replace(this_regex, name + ".value");
 
@@ -654,9 +660,15 @@ function processFileContent(file_contents_all, file_name) {
   }
 
   // Convert this.globals, special for a project
-  if (argv["replaceglobals"] && script_contents.includes("globals")) {
-    script_contents = script_contents.replace(/this.globals/gm, "globals");
-    all_imports_array.push('import { globals } from "@/main";\n');
+  if (argv["replaceglobals"]) {
+    if (script_contents.includes("globals")) {
+      script_contents = script_contents.replace(/this.globals/gm, "globals");
+      all_imports_array.push('import { globals } from "@/main";\n');
+    }
+    if (script_contents.includes("$filters")) {
+      script_contents = script_contents.replace(/\$filters/gm, "filters");
+      all_imports_array.push('import filters from "@/modules/filters";\n');
+    }
   }
 
   //////////////////////////////////////////
@@ -709,7 +721,6 @@ function processFileContent(file_contents_all, file_name) {
   while ((matches = regex_find_ref_reactive_for_grouping.exec(local_str))) {
     var const_name = matches[1];
     // 1 = ref, 2 = reactive
-    all_const_array.pus;
     var order = matches[2] === "ref" ? 1 : 2;
     all_const_array.push({
       line: matches[0],
@@ -727,9 +738,10 @@ function processFileContent(file_contents_all, file_name) {
 
   // for each const_name in all_const_array, Replace this.const_name with const_name.value
   for (var i = 0; i < all_const_array.length; i++) {
-    // only order 1 (ref) needs .value
-    if (all_const_array[i].order === 1) {
+    // skip (reactive), other add .value
+    if (all_const_array[i].order !== 2) {
       var const_name = all_const_array[i].name;
+      console.log(const_name);
       var this_const_name_regex = new RegExp(
         "this." + const_name + "(?!A-z0-9)",
         "g"
@@ -852,8 +864,8 @@ function processFileContent(file_contents_all, file_name) {
   if (all_const_array.filter((c) => c.line.includes("ref")).length > 0)
     vue_list.push("ref");
   if (has_computed) vue_list.push("computed");
-  if (props_list.filter((p) => p.default).length > 0)
-    vue_list.push("withDefaults");
+  //if (props_list.filter((p) => p.default).length > 0)
+  //  vue_list.push("withDefaults");
   if (script_contents.indexOf("watch") > 0) vue_list.push("watch");
   if (script_contents.indexOf("mounted") > 0) vue_list.push("onMounted");
   if (all_const_array.filter((c) => c.line.includes("reactive")).length > 0)
