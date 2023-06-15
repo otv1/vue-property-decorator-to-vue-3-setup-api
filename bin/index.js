@@ -331,26 +331,29 @@ const regex_other = [
 const upgrade_utils_array = [
   {
     regex: /\$router/gm,
-    to: "router",
-    const: "  const router = getCurrentInstance()?.proxy.$router;",
+    to: "router.value?",
+    const:
+      "  const router = computed(() => getCurrentInstance()?.proxy.$router);",
     vueimport: "getCurrentInstance",
   },
   {
     regex: /\$route/gm,
-    to: "route",
-    const: "  const route = getCurrentInstance()?.proxy.$route;",
+    to: "route.value?",
+    const:
+      "  const route = computed(() => getCurrentInstance()?.proxy.$route);",
     vueimport: "getCurrentInstance",
   },
   {
     regex: /\$vuetify/gm,
-    to: "vuetify",
-    const: "  const vuetify = getCurrentInstance()?.proxy.$vuetify;",
+    to: "vuetify.value?",
+    const:
+      "  const vuetify = computed(() => getCurrentInstance()?.proxy.$vuetify);",
     vueimport: "getCurrentInstance",
   },
   {
     regex: /\$forceUpdate/gm,
-    to: "forceUpdate",
-    const: "  const forceUpdate = getCurrentInstance()?.proxy.$forceUpdate;",
+    to: "getCurrentInstance()?.proxy.$forceUpdate",
+    const: "",
     vueimport: "getCurrentInstance",
   },
   {
