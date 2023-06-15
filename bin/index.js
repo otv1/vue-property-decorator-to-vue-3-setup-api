@@ -330,26 +330,50 @@ const upgrade_utils_array = [
   {
     regex: /\$router/gm,
     to: "router",
-    const: "const router = getCurrentInstance()?.proxy.$router;",
+    const: "  const router = getCurrentInstance()?.proxy.$router;",
     vueimport: "getCurrentInstance",
   },
   {
     regex: /\$route/gm,
     to: "route",
-    const: "const route = getCurrentInstance()?.proxy.$route;",
+    const: "  const route = getCurrentInstance()?.proxy.$route;",
     vueimport: "getCurrentInstance",
   },
   {
     regex: /\$vuetify/gm,
     to: "vuetify",
-    const: "const vuetify = getCurrentInstance()?.proxy.$vuetify;",
+    const: "  const vuetify = getCurrentInstance()?.proxy.$vuetify;",
     vueimport: "getCurrentInstance",
   },
   {
     regex: /\$forceUpdate/gm,
     to: "forceUpdate",
-    const: "const forceUpdate = getCurrentInstance()?.proxy.$forceUpdate;",
+    const: "  const forceUpdate = getCurrentInstance()?.proxy.$forceUpdate;",
     vueimport: "getCurrentInstance",
+  },
+  {
+    regex: /\$delete/gm,
+    to: "Vue.delete",
+    const: "",
+    vueimport: "Vue",
+  },
+  {
+    regex: /\$set/gm,
+    to: "Vue.set",
+    const: "",
+    vueimport: "Vue",
+  },
+  {
+    regex: /\$slots/gm,
+    to: "slots",
+    const: "  const slots = useSlots();",
+    vueimport: "useSlots",
+  },
+  {
+    regex: /\$nextTick/gm,
+    to: "nextTick",
+    const: "",
+    vueimport: "nextTick",
   },
 ];
 
@@ -637,7 +661,7 @@ function processFileContent(file_contents_all, file_name) {
   );
 
   // Replace upgrade_utils_array
-  const vue_list = [];
+  let vue_list = [];
   upgrade_utils_array.forEach((u) => {
     const matches = u.regex.exec(script_contents);
     if (matches === null) return;
@@ -648,7 +672,10 @@ function processFileContent(file_contents_all, file_name) {
     if (u.vueimport !== "" && !vue_list.includes(u.vueimport)) {
       vue_list.push(u.vueimport);
     }
-    if (all_const_array.indexOf(u.name) === -1) {
+    if (
+      u.const !== "" &&
+      all_const_array.filter((a) => a.name === u.to).length === 0
+    ) {
       all_const_array.push({
         // line: `const ${u.to} = ${u.import}();`,
         line: u.const,
@@ -836,7 +863,13 @@ function processFileContent(file_contents_all, file_name) {
   // Manipulate imports
   if (vue_list.length > 0) {
     // Adding importing vue
-    const imp_str = "import { " + vue_list.join(", ") + ' } from "vue";\n';
+    let Vue = "";
+    if (vue_list.includes("Vue")) {
+      Vue = "Vue, ";
+      vue_list = vue_list.filter((v) => v !== "Vue");
+    }
+    const imp_str =
+      "import " + Vue + "{ " + vue_list.join(", ") + ' } from "vue";\n';
 
     // add to the top of the imports
     all_imports_array.unshift(imp_str);
