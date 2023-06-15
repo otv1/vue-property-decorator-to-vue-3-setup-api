@@ -393,6 +393,7 @@ if (!argv["no-comment"]) import_syncmodel_str = import_syncmodel_str + comment;
 startConversionScript();
 
 function startConversionScript() {
+  console.log("");
   if (file_name.length > 0) {
     processFile({ Name: file_name, Path: import_path + "/" + file_name });
   } else {
@@ -403,7 +404,9 @@ function startConversionScript() {
     }
     console.log("Finished processing folder");
   }
-  console.log("Please run linting on the generated code");
+  console.log(
+    "\n*** General remarks: Double quotes required. Single quotes not supported. Ensure correct linting before and after the conversion. Tab size must be 2. *** "
+  );
 }
 
 function getAllFilesInFolder(folder) {
