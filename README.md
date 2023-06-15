@@ -61,6 +61,7 @@ vue-convert --help
                      reactive.                                     
   -n, --no-comment   Disable the inclusion of informative comments within
                      the JavaScript code for importing the modelWrapper.
+  -r, --required     Set all the properties as required  
 ```
 ### More example:
 ```

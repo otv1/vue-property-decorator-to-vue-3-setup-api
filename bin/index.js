@@ -45,6 +45,11 @@ const argv = yargs
     describe: "For internal usage, in a particular project.",
     type: "boolean",
     hidden: true,
+  })
+  .option("required", {
+    alias: "r",
+    describe: "Set all the properties as required",
+    type: "boolean",
   }).argv;
 
 if (argv.path && !isFileOrDirectory(getFullPath(argv.path))) {
@@ -489,7 +494,9 @@ function processFileContent(file_contents_all, file_name) {
 
       const prop = {
         decorator: matches[1],
-        required: array_prop.includes({ name: "required", value: "true" }),
+        required:
+          argv["required"] ||
+          array_prop.includes({ name: "required", value: "true" }),
         default: array_prop.find((p) => p.name === "default")?.value ?? "",
         name: matches[2] || matches[5],
         type: matches[6],
@@ -629,7 +636,9 @@ function processFileContent(file_contents_all, file_name) {
     props_list.unshift({
       name: target_vue_version === 2 ? "value" : "modelValue",
       type,
-      required: array_prop.includes({ name: "required", value: "true" }),
+      required:
+        argv["required"] ||
+        array_prop.includes({ name: "required", value: "true" }),
       default: array_prop.find((p) => p.name === "default")?.value ?? "",
     });
     // add to top of emits_list // vue 3 "update:modelValue"
