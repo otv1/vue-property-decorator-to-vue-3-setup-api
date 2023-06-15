@@ -56,9 +56,7 @@ vue-convert --help
                      Defaults to the current path.                       
   -v, --vue          Set the Vue target version. By default, it is set to
                      2. Use 3 to convert to Vue 3. The difference is
-                     related to v-model.
-  -g, --grouping     Activate the grouping of declarations for refs/
-                     reactive.                                     
+                     related to v-model.                                 
   -n, --no-comment   Disable the inclusion of informative comments within
                      the JavaScript code for importing the modelWrapper.
   -r, --required     Set all the properties as required  
@@ -80,7 +78,7 @@ While this project focuses on achieving up to 95% conversion for a specific proj
 ## Known issues
 1. If you write comments just before the </script> tag, the system won't understand. It needs to see an end-bracket (}) right before the </script> tag, not a comment.
 
-2. The -g --grouping feature doesn't work well with arrays or objects that are written directly in the code and end with a semicolon on the same line. The system expects to see the semicolon at the end of the entire array or object, not at the end of a line.
+2. The script does not like comments after ; on one line.
 
 ## Contributing
 Your feedback and contributions are welcome! If you encounter any issues, have suggestions or improvements, feel free to share. I appreciate your support in making this tool more efficient and versatile.
