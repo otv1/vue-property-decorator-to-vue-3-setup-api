@@ -119,7 +119,7 @@ const regex_find_ref_reactive_for_grouping =
 const regex_const_computed =
   /^[ \t]{2}(?:readonly|public|private)? ?get (.*)\((.*)?\)(:)? ?(.*)? \{$/gm;
 const regex_var_equals_var = /[ ]{2}(\w+) = (\w+);/g;
-const regex_watch = /[ ]{2}@Watch\("(.*)"\)$/;
+const regex_watch = /[ ]{2}@Watch\("(.*)"(, \{(?:.*)\})?\)$/;
 const regex_emits = /\$emit\(["'](\w*)["'].*?\)/g;
 const regex_vmodel =
   /[ ]{2}@VModel\(\{(.*? ?.*?)\}\) ?\n?\s* ?(?:readonly|public|private)? ?(.*)!:([\s\S]*?);/gm;
@@ -740,6 +740,7 @@ function processFileContent(file_contents_all, file_name) {
   const watch_other_list = [];
 
   let found_watch = false;
+  let watch_options = "";
   const lines = script_contents.split("\n");
   for (var i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -750,6 +751,7 @@ function processFileContent(file_contents_all, file_name) {
         found_watch = true;
 
         const watch_name = match[1];
+        watch_options = match[2] ?? "";
         // If exists as const variable = ref(... or ref<
         if (all_const_array.find((c) => c.name === watch_name.split(".")[0])) {
           watch_var_list.push(watch_name);
@@ -774,19 +776,18 @@ function processFileContent(file_contents_all, file_name) {
 
       lines[i] = "";
     } else {
+      // Next line after last @Watch
       if (found_watch) {
         found_watch = false;
-        if (
-          line.indexOf(" = (): void => {") > -1 ||
-          line.indexOf(" = async (): Promise<void> => {") > -1
-        ) {
+        if (line.indexOf("=> {") > -1) {
           const function_name = line.split(" = ")[0].split("const ")[1];
           lines[i] =
             buildWatchString(
               watch_props_list,
               watch_var_list,
               watch_other_list,
-              function_name
+              function_name,
+              watch_options
             ) +
             "\n" +
             line;
@@ -954,7 +955,8 @@ function buildWatchString(
   watch_props_list,
   watch_var_list,
   watch_other_list,
-  function_name
+  function_name,
+  watch_options
 ) {
   var watch_string = "";
   if (
@@ -991,7 +993,8 @@ function buildWatchString(
     ) {
       watch_string += "]";
     }
-    watch_string += ", () => void " + function_name + "());\n";
+    watch_string +=
+      ", () => void " + function_name + "()" + watch_options + ");\n";
   }
   return watch_string;
 }
