@@ -148,6 +148,13 @@ const regex_other = [
     to: "$2</script>",
     disabled: false,
   },
+  ,
+  {
+    // variable: any; => const variable = ref<any>(null)
+    regex: /^[ ]{2}(\w+): any;$/gm,
+    to: "  const $1 = ref<any>(null);",
+    disabled: false,
+  },
   {
     // Computed
     regex: regex_const_computed,
@@ -312,21 +319,6 @@ const regex_other = [
     // to if ("elevation" in props) {
     regex: /" in this/gm,
     to: '" in props',
-    disabled: true,
-  },
-  {
-    regex: /\$vuetify/gm,
-    to: "getCurrentInstance()?.proxy.$vuetify",
-    disabled: true,
-  },
-  {
-    regex: /\$router/gm,
-    to: "getCurrentInstance()?.proxy.$router",
-    disabled: true,
-  },
-  {
-    regex: /\$forceUpdate/gm,
-    to: "getCurrentInstance()?.proxy.$forceUpdate",
     disabled: true,
   },
 ];
