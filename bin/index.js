@@ -593,7 +593,6 @@ function processFileContent(file_contents_all, file_name) {
   var has_computed = false;
   while ((matches = regex_const_computed.exec(local_str))) {
     var name = matches[1];
-    console.log(name);
     var this_regex = new RegExp("this." + name + "(?!A-z0-9)", "g");
     script_contents = script_contents.replace(this_regex, name + ".value");
 
@@ -741,7 +740,6 @@ function processFileContent(file_contents_all, file_name) {
     // skip (reactive), other add .value
     if (all_const_array[i].order !== 2) {
       var const_name = all_const_array[i].name;
-      console.log(const_name);
       var this_const_name_regex = new RegExp(
         "this." + const_name + "(?!A-z0-9)",
         "g"
@@ -992,10 +990,6 @@ function buildWatchString(
       watch_string += "[";
     }
 
-    //console.log("watch_props_list: " + watch_props_list.length);
-    //console.log("watch_var_list: " + watch_var_list.length);
-    //console.log("watch_other_list: " + watch_other_list.length);
-
     var joined_list = [
       ...watch_var_list,
       ...watch_props_list.map((w) => "props." + w),
@@ -1090,12 +1084,9 @@ function replaceEndCharReturn(
 
     if (line.indexOf(match_simple_first) > -1) {
       // check if next line contains regex
-      //console.log("match_simple_first : " + line);
-      //console.log("then_match_regex : " + then_match_regex);
       var matches = then_match_regex.exec(line);
       if (matches) {
         // we found a match
-        //console.log("found match, line: " + line);
         found_end_char = false;
         // check if next line contains end char
         for (var y = i; y < lines.length; y++) {
