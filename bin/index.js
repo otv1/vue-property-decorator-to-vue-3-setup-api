@@ -40,6 +40,11 @@ const argv = yargs
       "Disable the inclusion of informative comments within the JavaScript code for importing the modelWrapper.",
     type: "boolean",
     "boolean-negation": true,
+  })
+  .option("replaceglobals", {
+    describe: "For internal usage, in a particular project.",
+    type: "boolean",
+    hidden: true,
   }).argv;
 
 if (argv.path && !isFileOrDirectory(getFullPath(argv.path))) {
@@ -639,6 +644,12 @@ function processFileContent(file_contents_all, file_name) {
 
     // remove the @VModel
     script_contents = script_contents.replace(matches[0], "");
+  }
+
+  // Convert this.globals, special for a project
+  if (argv["replaceglobals"] && script_contents.includes("globals")) {
+    script_contents = script_contents.replace(/this.globals/gm, "globals");
+    all_imports_array.push('import { globals } from "@/main";\n');
   }
 
   //////////////////////////////////////////
