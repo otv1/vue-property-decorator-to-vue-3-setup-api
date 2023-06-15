@@ -588,7 +588,7 @@ function processFileContent(file_contents_all, file_name) {
   var has_computed = false;
   while ((matches = regex_const_computed.exec(local_str))) {
     var name = matches[1];
-    var this_regex = new RegExp("this." + name + "(?![A-z0-9])", "g");
+    var this_regex = new RegExp("this." + name + "(?!A-z0-9)", "g");
     script_contents = script_contents.replace(this_regex, name + ".value");
 
     has_computed = true;
@@ -600,12 +600,12 @@ function processFileContent(file_contents_all, file_name) {
   for (var i = 0; i < props_list.length; i++) {
     var prop = props_list[i];
     var prop_name = prop.name;
-    this_prop_regex = new RegExp("this." + prop_name + "(?![A-z0-9])", "g");
+    this_prop_regex = new RegExp("this." + prop_name + "(?!A-z0-9)", "g");
     script_contents = script_contents.replace(
       this_prop_regex,
       "props." + prop_name
     );
-    template_prop_regex = new RegExp('"' + prop_name + "(?![A-z0-9])", "g");
+    template_prop_regex = new RegExp('"' + prop_name + "(?!A-z0-9)", "g");
     content_array[0] = content_array[0].replace(
       template_prop_regex,
       '"props.' + prop_name
@@ -731,7 +731,7 @@ function processFileContent(file_contents_all, file_name) {
     if (all_const_array[i].order === 1) {
       var const_name = all_const_array[i].name;
       var this_const_name_regex = new RegExp(
-        "this." + const_name + "(?![A-z0-9])",
+        "this." + const_name + "(?!A-z0-9)",
         "g"
       );
       script_contents = script_contents.replace(
