@@ -63,7 +63,7 @@ vue-convert --help
 ```
 ### More example:
 ```
-vue-convert --path . --destination "./exportfolder" --vue 3 -g -n
+vue-convert --path . --destination "./exportfolder" --vue 3 -n
 ```
 
 ## Disclaimer
