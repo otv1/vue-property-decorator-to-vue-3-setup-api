@@ -2,7 +2,7 @@
 
 // This Node.js script transforms Vue 2 vue-property-decorator code to Vue 3 <script setup lang="ts">.
 
-let TARGET_VUE_VERSION = 2; // 2 or 3 !! IMPORTANT !!
+let target_vue_version = 2;
 
 const yargs = require("yargs");
 const node_path = require("path");
@@ -100,7 +100,7 @@ const destination_path = argv.destination
   : import_path;
 
 if (argv.vue) {
-  TARGET_VUE_VERSION = argv.vue;
+  target_vue_version = argv.vue;
 }
 
 // regular expressions (regex)
@@ -627,14 +627,14 @@ function processFileContent(file_contents_all, file_name) {
 
     // add to top of props_list
     props_list.unshift({
-      name: TARGET_VUE_VERSION === 2 ? "value" : "modelValue",
+      name: target_vue_version === 2 ? "value" : "modelValue",
       type,
       required: array_prop.includes({ name: "required", value: "true" }),
       default: array_prop.find((p) => p.name === "default")?.value ?? "",
     });
     // add to top of emits_list // vue 3 "update:modelValue"
     emits_list.unshift(
-      TARGET_VUE_VERSION === 2 ? "input" : "update:modelValue"
+      target_vue_version === 2 ? "input" : "update:modelValue"
     );
 
     // remove the @VModel
