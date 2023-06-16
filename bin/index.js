@@ -332,22 +332,19 @@ const upgrade_utils_array = [
   {
     regex: /\$router/gm,
     to: "router",
-    const:
-      "  const router = computed(() => getCurrentInstance()?.proxy.$router);",
+    const: "  const router = getCurrentInstance()?.proxy.$router;",
     vueimport: "getCurrentInstance",
   },
   {
     regex: /\$route/gm,
     to: "route",
-    const:
-      "  const route = computed(() => getCurrentInstance()?.proxy.$route);",
+    const: "  const route = getCurrentInstance()?.proxy.$route;",
     vueimport: "getCurrentInstance",
   },
   {
     regex: /\$vuetify/gm,
     to: "vuetify",
-    const:
-      "  const vuetify = computed(() => getCurrentInstance()?.proxy.$vuetify);",
+    const: "  const vuetify = getCurrentInstance()?.proxy.$vuetify;",
     vueimport: "getCurrentInstance",
   },
   {
