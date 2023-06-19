@@ -117,7 +117,7 @@ if (argv.vue) {
 
 const regex_imports = /import (.*?) from (.*?);\n/gs;
 const regex_interfaces_multiline = /export interface (.*?) {\n(.*?)\n}/gs;
-const regex_find_this = /this.(\w*)/g;
+const regex_find_this = /this\.(\w*)/g;
 // This regex is used to find const variables with type, for objects and arays after the convertion, so we can put them in a list and sort them, and move them to the top of the script:
 const regex_find_ref_reactive_for_grouping =
   /^[ ]{2}const (\w+) = (ref|reactive)(\<([A-z0-9\[\]\{\} :;\|\n]*)\>)?\([\n ]*?(\[|\{)?(.|\n)*?(\]|\})?[\n ]*\);$/gm; // Se also: "Regex: Find const variable with type"
@@ -176,7 +176,7 @@ const regex_other = [
   {
     // Convert this.xxxx = ref<>(null) to xxxx.value = null;
     regex:
-      /^[ ]*this.(\w+) = ref\<([A-z0-9\[\] \|]*)\>\([\n ]*(.*)[\n ]*\) as unknown as ([A-z0-9\[\] \|]*);$/gm,
+      /^[ ]*this\.(\w+) = ref\<([A-z0-9\[\] \|]*)\>\([\n ]*(.*)[\n ]*\) as unknown as ([A-z0-9\[\] \|]*);$/gm,
     to: "    $1.value = $3;",
     disabled: false,
   },
@@ -590,8 +590,10 @@ function processFileContent(file_contents_all, file_name) {
   var has_computed = false;
   while ((matches = regex_const_computed.exec(local_str))) {
     var name = matches[1];
-    var this_regex = new RegExp("this." + name + "(?!A-z0-9)", "g");
-    script_contents = script_contents.replace(this_regex, name + ".value");
+    var this_regex = new RegExp(`this\\.${name}(?![A-z0-9])`, "g");
+    script_contents = script_contents.replace(this_regex, `${name}.value`);
+    this_regex = new RegExp(`this\\.${name}(?=\\[)`, "g");
+    script_contents = script_contents.replace(this_regex, `${name}.value`);
 
     has_computed = true;
   }
@@ -602,15 +604,25 @@ function processFileContent(file_contents_all, file_name) {
   for (var i = 0; i < props_list.length; i++) {
     var prop = props_list[i];
     var prop_name = prop.name;
-    this_prop_regex = new RegExp("this." + prop_name + "(?!A-z0-9)", "g");
+    this_prop_regex = new RegExp(`this\\.${prop_name}(?![A-z0-9])`, "g");
     script_contents = script_contents.replace(
       this_prop_regex,
-      "props." + prop_name
+      `props.${prop_name}`
     );
-    template_prop_regex = new RegExp('"' + prop_name + "(?!A-z0-9)", "g");
+    this_prop_regex = new RegExp(`this\\.${prop_name}(?=\\[)`, "g");
+    script_contents = script_contents.replace(
+      this_prop_regex,
+      `props.${prop_name}`
+    );
+    template_prop_regex = new RegExp(`"${prop_name}(?![A-z0-9])`, "g");
     content_array[0] = content_array[0].replace(
       template_prop_regex,
-      '"props.' + prop_name
+      `"props.${prop_name}`
+    );
+    template_prop_regex = new RegExp(`"${prop_name}(?=\\[)`, "g");
+    content_array[0] = content_array[0].replace(
+      template_prop_regex,
+      `"props.${prop_name}`
     );
   }
 
@@ -658,7 +670,7 @@ function processFileContent(file_contents_all, file_name) {
   // Convert this.globals, special for a project
   if (argv["replaceglobals"]) {
     if (script_contents.includes("globals")) {
-      script_contents = script_contents.replace(/this.globals/gm, "globals");
+      script_contents = script_contents.replace(/this\.globals/gm, "globals");
       all_imports_array.push('import { globals } from "@/main";\n');
     }
     if (script_contents.includes("$filters")) {
@@ -737,13 +749,22 @@ function processFileContent(file_contents_all, file_name) {
     // skip (reactive), other add .value
     if (all_const_array[i].order !== 2) {
       var const_name = all_const_array[i].name;
+
       var this_const_name_regex = new RegExp(
-        "this." + const_name + "(?!A-z0-9)",
+        `this\\.${const_name}(?![A-z0-9])`,
         "g"
       );
+
       script_contents = script_contents.replace(
         this_const_name_regex,
-        const_name + ".value"
+        `${const_name}.value`
+      );
+
+      this_const_name_regex = new RegExp(`this\\.${const_name}(?=\\[)`, "g");
+
+      script_contents = script_contents.replace(
+        this_const_name_regex,
+        `${const_name}.value`
       );
     }
   }
@@ -817,7 +838,7 @@ function processFileContent(file_contents_all, file_name) {
 
   // Convert $watch
   const regex_watch_2 =
-    /^[ ]*(this.)?\$watch\("(\w+(.?\w*)*)", \(\) \=\> \{$/gm;
+    /^[ ]*(this\.)?\$watch\("(\w+(.?\w*)*)", \(\) \=\> \{$/gm;
   while ((matches = regex_watch_2.exec(script_contents))) {
     const watch_name = matches[2];
     let new_watch_name = watch_name;
